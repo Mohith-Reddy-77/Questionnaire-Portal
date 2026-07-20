@@ -50,15 +50,8 @@ export const Navbar = () => {
         
         {/* Logo & Brand */}
         <Link href="/" className="flex items-center gap-3 group">
-          <div className="p-1 rounded-xl bg-slate-900/5 dark:bg-white/5 border border-slate-200 dark:border-slate-800 group-hover:scale-105 transition-transform duration-300">
-            <svg viewBox="0 0 64 64" className="w-9 h-9" fill="none" xmlns="http://www.w3.org/2000/svg">
-              {/* Red Arrow Path matching READY */}
-              <path d="M20 16v32h28v-12h8" stroke="#e11d48" strokeWidth="5.5" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M50 30l6 6-6 6" stroke="#e11d48" strokeWidth="5.5" strokeLinecap="round" strokeLinejoin="round"/>
-              {/* Orange/Yellow Arrow Path matching READY */}
-              <path d="M44 48V16H16v12H8" stroke="#f97316" strokeWidth="5.5" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M14 22l-6 6 6 6" stroke="#f97316" strokeWidth="5.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+          <div className="p-1.5 rounded-xl bg-white border border-slate-200 group-hover:scale-105 transition-transform duration-300 shadow-sm flex items-center justify-center shrink-0">
+            <img src="/logo.png" alt="READY Logo" className="w-9 h-9 object-contain" />
           </div>
           <div>
             <div className="flex items-center gap-2">

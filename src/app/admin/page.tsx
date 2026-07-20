@@ -256,9 +256,12 @@ export default function AdminDashboardPage() {
         </head>
         <body>
           <div class="header">
-            <div>
-              <h1 class="title">READY Student Assessment Report</h1>
-              <div class="subtitle">Official Student Details, Questionnaire Log & Counselor Comments</div>
+            <div style="display: flex; align-items: center; gap: 14px;">
+              <img src="${window.location.origin}/logo.png" style="width: 44px; height: 44px; object-fit: contain;" />
+              <div>
+                <h1 class="title">READY Student Assessment Report</h1>
+                <div class="subtitle">Official Student Details, Questionnaire Log & Counselor Comments</div>
+              </div>
             </div>
             <div style="text-align: right; font-size: 11px; color: #64748b;">
               <strong>Date:</strong> ${new Date(sub.assessment.completedAt).toLocaleDateString()}<br/>
