@@ -23,17 +23,15 @@ create table if not exists careers (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
-create table if not exists submissions (
+create table if not exists fasttrack_submissions (
   id text primary key,
   payload jsonb not null,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- Enable RLS Policies
-alter table settings enable row level security;
-alter table questions enable row level security;
-alter table careers enable row level security;
-alter table submissions enable row level security;
+-- Enable RLS for fasttrack_submissions
+alter table fasttrack_submissions enable row level security;
+create policy "Allow fasttrack_submissions" on fasttrack_submissions for all using (true);
 
 create policy "Allow settings" on settings for all using (true);
 create policy "Allow questions" on questions for all using (true);

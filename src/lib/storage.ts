@@ -4,7 +4,8 @@ import {
   StudentSubmissionDetail, 
   ReadyDiagnosticReport,
   QuestionnaireQuestion,
-  CareerProfile
+  CareerProfile,
+  FastTrackSubmission
 } from './types';
 import { sampleInitialSubmissions, questionnaireQuestions, careerCatalog } from './mock-data';
 
@@ -19,6 +20,8 @@ const STORAGE_KEYS = {
   QUESTIONS: 'ready_portal_custom_questions',
   CAREERS: 'ready_portal_custom_careers',
   THEME: 'ready_theme',
+  FASTTRACK: 'ready_portal_fasttrack',
+  FASTTRACK_BIN: 'ready_portal_fasttrack_bin',
 };
 
 const isBrowser = () => typeof window !== 'undefined';
@@ -312,4 +315,79 @@ export const setAdminAuthenticated = (auth: boolean): void => {
 
 export const logoutAdmin = (): void => {
   setAdminAuthenticated(false);
+};
+
+export const getFastTrackSubmissions = (): FastTrackSubmission[] => {
+  return getItem<FastTrackSubmission[]>(STORAGE_KEYS.FASTTRACK, []);
+};
+
+export const saveFastTrackSubmission = (sub: FastTrackSubmission): void => {
+  const current = getFastTrackSubmissions();
+  const idx = current.findIndex(s => s.id === sub.id);
+  let updated = [...current];
+  if (idx >= 0) {
+    updated[idx] = sub;
+  } else {
+    updated.unshift(sub);
+  }
+  setItem(STORAGE_KEYS.FASTTRACK, updated);
+  callApi('/api/fasttrack', { action: 'save', submission: sub });
+};
+
+export const syncRemoteFastTrackSubmissions = async (): Promise<void> => {
+  try {
+    const res = await callApi('/api/fasttrack');
+    if (res && Array.isArray(res.submissions)) {
+      setItem(STORAGE_KEYS.FASTTRACK, res.submissions);
+    }
+    if (res && Array.isArray(res.recycleBin)) {
+      setItem(STORAGE_KEYS.FASTTRACK_BIN, res.recycleBin);
+    }
+  } catch (err) {
+    console.warn(err);
+  }
+};
+
+export const getFastTrackRecycleBin = (): FastTrackSubmission[] => {
+  return getItem<FastTrackSubmission[]>(STORAGE_KEYS.FASTTRACK_BIN, []);
+};
+
+export const moveFastTrackToRecycleBin = async (id: string): Promise<void> => {
+  const current = getFastTrackSubmissions();
+  const target = current.find(s => s.id === id);
+  if (target) {
+    const updatedSub: FastTrackSubmission = { ...target, deletedAt: new Date().toISOString() };
+    const filteredActive = current.filter(s => s.id !== id);
+    const bin = getFastTrackRecycleBin().filter(s => s.id !== id);
+    bin.unshift(updatedSub);
+    setItem(STORAGE_KEYS.FASTTRACK, filteredActive);
+    setItem(STORAGE_KEYS.FASTTRACK_BIN, bin);
+    await callApi('/api/fasttrack', { action: 'move_to_bin', id });
+  }
+};
+
+export const restoreFastTrackFromRecycleBin = async (id: string): Promise<void> => {
+  const bin = getFastTrackRecycleBin();
+  const target = bin.find(s => s.id === id);
+  if (target) {
+    const restored: FastTrackSubmission = { ...target };
+    delete restored.deletedAt;
+    const filteredBin = bin.filter(s => s.id !== id);
+    const active = getFastTrackSubmissions().filter(s => s.id !== id);
+    active.unshift(restored);
+    setItem(STORAGE_KEYS.FASTTRACK, active);
+    setItem(STORAGE_KEYS.FASTTRACK_BIN, filteredBin);
+    await callApi('/api/fasttrack', { action: 'restore_from_bin', id });
+  }
+};
+
+export const permanentlyDeleteFastTrack = async (id: string): Promise<void> => {
+  const bin = getFastTrackRecycleBin().filter(s => s.id !== id);
+  setItem(STORAGE_KEYS.FASTTRACK_BIN, bin);
+  await callApi('/api/fasttrack', { action: 'permanent_delete', id });
+};
+
+export const emptyFastTrackRecycleBin = async (): Promise<void> => {
+  setItem(STORAGE_KEYS.FASTTRACK_BIN, []);
+  await callApi('/api/fasttrack', { action: 'empty_bin' });
 };

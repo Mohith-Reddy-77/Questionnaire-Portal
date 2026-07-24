@@ -10,6 +10,7 @@ export type StudentProfile = {
   id: string;
   name: string;
   email: string;
+  phone: string;
   school: string;
   grade: string;
   targetYear?: string;
@@ -45,6 +46,7 @@ export type CareerProfile = {
   recommendedRoadmap?: string[];
   primaryDimension: DimensionKey;
   accentColor: string;
+  pdfUrl?: string;
 };
 
 export type CareerMatch = CareerProfile & {
@@ -62,6 +64,8 @@ export type AssessmentResult = {
   topCareerMatches: CareerMatch[];
   selectedCareerId?: string;
   selectedCareerName?: string;
+  selectedCareerIds?: string[];
+  selectedCareerNames?: string[];
   exitTimestamp?: string;
 };
 
@@ -74,5 +78,17 @@ export type StudentSubmissionDetail = {
   profile: StudentProfile;
   assessment: AssessmentResult;
   report: ReadyDiagnosticReport;
+  deletedAt?: string;
+};
+
+export type FastTrackSubmission = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  school: string;
+  grade: string;
+  selectedCareers: string[];
+  createdAt: string;
   deletedAt?: string;
 };

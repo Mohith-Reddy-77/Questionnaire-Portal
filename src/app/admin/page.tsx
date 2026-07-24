@@ -24,7 +24,8 @@ import {
   RotateCcw,
   AlertTriangle,
   Download,
-  RefreshCw
+  RefreshCw,
+  Sparkles
 } from 'lucide-react';
 import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
@@ -51,9 +52,16 @@ import {
   syncRemoteQuestions,
   syncRemoteCareers,
   verifyAdminPassword,
-  setAdminPassword
+  setAdminPassword,
+  getFastTrackSubmissions,
+  syncRemoteFastTrackSubmissions,
+  getFastTrackRecycleBin,
+  moveFastTrackToRecycleBin,
+  restoreFastTrackFromRecycleBin,
+  permanentlyDeleteFastTrack,
+  emptyFastTrackRecycleBin
 } from '@/lib/storage';
-import { StudentSubmissionDetail, QuestionnaireQuestion, CareerProfile, DimensionKey, ReadyDiagnosticReport } from '@/lib/types';
+import { StudentSubmissionDetail, QuestionnaireQuestion, CareerProfile, DimensionKey, ReadyDiagnosticReport, FastTrackSubmission } from '@/lib/types';
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -68,8 +76,10 @@ export default function AdminDashboardPage() {
   const [confirmPasswordInput, setConfirmPasswordInput] = useState('');
   const [passChangeError, setPassChangeError] = useState('');
 
-  const [activeTab, setActiveTab] = useState<'submissions' | 'questionnaire' | 'careers' | 'recycleBin'>('submissions');
+  const [activeTab, setActiveTab] = useState<'submissions' | 'fasttrack' | 'questionnaire' | 'careers' | 'recycleBin' | 'fasttrackBin'>('submissions');
   const [submissions, setSubmissions] = useState<StudentSubmissionDetail[]>([]);
+  const [fastTrackLeads, setFastTrackLeads] = useState<FastTrackSubmission[]>([]);
+  const [fastTrackRecycleBin, setFastTrackRecycleBin] = useState<FastTrackSubmission[]>([]);
   const [recycleBin, setRecycleBin] = useState<StudentSubmissionDetail[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -99,6 +109,7 @@ export default function AdminDashboardPage() {
         syncRemoteQuestions(),
         syncRemoteCareers(),
         syncRemoteAdminPassword(),
+        syncRemoteFastTrackSubmissions()
       ]);
       refreshData();
       triggerNotification('Dashboard refreshed with live database records!');
@@ -137,10 +148,17 @@ export default function AdminDashboardPage() {
     setRecycleBin(getRecycleBinSubmissions());
     setQuestions(getCustomQuestions());
     setCareers(getCustomCareers());
+    setFastTrackLeads(getFastTrackSubmissions());
+    setFastTrackRecycleBin(getFastTrackRecycleBin());
 
     syncRemoteSubmissions().then(() => {
       setSubmissions(getAllSubmissions());
       setRecycleBin(getRecycleBinSubmissions());
+    });
+
+    syncRemoteFastTrackSubmissions().then(() => {
+      setFastTrackLeads(getFastTrackSubmissions());
+      setFastTrackRecycleBin(getFastTrackRecycleBin());
     });
 
     syncRemoteQuestions().then((qList) => {
@@ -274,12 +292,13 @@ export default function AdminDashboardPage() {
             <div class="grid">
               <div class="card"><div class="card-label">Student Name</div><div class="card-val">${sub.profile.name}</div></div>
               <div class="card"><div class="card-label">Email Address</div><div class="card-val">${sub.profile.email}</div></div>
+              <div class="card"><div class="card-label">Contact Phone</div><div class="card-val">${sub.profile.phone || 'N/A'}</div></div>
               <div class="card"><div class="card-label">School / Institution</div><div class="card-val">${sub.profile.school}</div></div>
               <div class="card"><div class="card-label">Grade Level</div><div class="card-val">${sub.profile.grade}</div></div>
             </div>
             <div class="card" style="margin-top: 12px; background-color: #fff7ed; border-color: #fdba74;">
               <div class="card-label" style="color: #c2410c;">Selected Target Profession</div>
-              <div class="card-val" style="color: #ea580c; font-size: 16px;">${sub.assessment.selectedCareerName || 'Not Selected Yet'}</div>
+              <div className="card-val" style="color: #ea580c; font-size: 16px;">${sub.assessment.selectedCareerNames?.join(', ') || sub.assessment.selectedCareerName || 'Not Selected Yet'}</div>
             </div>
           </div>
 
@@ -342,6 +361,45 @@ export default function AdminDashboardPage() {
       setRecycleBin([]);
       await emptyRecycleBin();
       triggerNotification('Recycle Bin emptied.');
+    }
+  };
+
+  // Fast-Track Recycle Bin Handlers
+  const handleMoveFastTrackToBin = async (lead: FastTrackSubmission) => {
+    if (confirm(`Move candidate "${lead.name}" to Recycle Bin?`)) {
+      const deletedItem = { ...lead, deletedAt: new Date().toISOString() };
+      setFastTrackLeads(prev => prev.filter(s => s.id !== lead.id));
+      setFastTrackRecycleBin(prev => [deletedItem, ...prev.filter(s => s.id !== lead.id)]);
+
+      await moveFastTrackToRecycleBin(lead.id);
+      triggerNotification(`Moved "${lead.name}" to Recycle Bin.`);
+    }
+  };
+
+  const handleRestoreFastTrackFromBin = async (lead: FastTrackSubmission) => {
+    const restoredItem = { ...lead };
+    delete restoredItem.deletedAt;
+
+    setFastTrackRecycleBin(prev => prev.filter(s => s.id !== lead.id));
+    setFastTrackLeads(prev => [restoredItem, ...prev.filter(s => s.id !== lead.id)]);
+
+    await restoreFastTrackFromRecycleBin(lead.id);
+    triggerNotification(`Restored "${lead.name}" back to active leads list.`);
+  };
+
+  const handlePermanentDeleteFastTrack = async (lead: FastTrackSubmission) => {
+    if (confirm(`PERMANENTLY DELETE "${lead.name}"? This action CANNOT be undone.`)) {
+      setFastTrackRecycleBin(prev => prev.filter(s => s.id !== lead.id));
+      await permanentlyDeleteFastTrack(lead.id);
+      triggerNotification(`Permanently deleted candidate record.`);
+    }
+  };
+
+  const handleEmptyFastTrackBin = async () => {
+    if (confirm('Permanently delete ALL items in the Fast-Track Recycle Bin? This CANNOT be undone.')) {
+      setFastTrackRecycleBin([]);
+      await emptyFastTrackRecycleBin();
+      triggerNotification('Fast-Track Recycle Bin emptied.');
     }
   };
 
@@ -447,9 +505,9 @@ export default function AdminDashboardPage() {
   };
 
   const exportCSV = () => {
-    const csvHeader = 'Student Name,Email,School,Grade,Selected Career,Status,Completed At\n';
+    const csvHeader = 'Student Name,Email,Phone,School,Grade,Selected Career,Status,Completed At\n';
     const csvRows = submissions.map(s => 
-      `"${s.profile.name}","${s.profile.email}","${s.profile.school}","${s.profile.grade}","${s.assessment.selectedCareerName || 'None'}","${s.report.status}","${s.assessment.completedAt}"`
+      `"${s.profile.name}","${s.profile.email}","${s.profile.phone || ''}","${s.profile.school}","${s.profile.grade}","${s.assessment.selectedCareerNames?.join(', ') || s.assessment.selectedCareerName || 'None'}","${s.report.status}","${s.assessment.completedAt}"`
     ).join('\n');
     
     const blob = new Blob([csvHeader + csvRows], { type: 'text/csv' });
@@ -537,7 +595,7 @@ export default function AdminDashboardPage() {
       s.profile.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.profile.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.profile.school.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (s.assessment.selectedCareerName || '').toLowerCase().includes(searchQuery.toLowerCase());
+      ((s.assessment.selectedCareerName || '') || (s.assessment.selectedCareerNames?.join(', ') || '')).toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesStatus = statusFilter === 'all' || s.report.status === statusFilter;
 
@@ -624,6 +682,18 @@ export default function AdminDashboardPage() {
           </button>
 
           <button
+            onClick={() => setActiveTab('fasttrack')}
+            className={`px-5 py-3 border-b-2 transition flex items-center gap-2 shrink-0 ${
+              activeTab === 'fasttrack'
+                ? 'border-orange-500 text-orange-600 dark:text-orange-400 font-bold'
+                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900'
+            }`}
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>Fast-Track Leads ({fastTrackLeads.length})</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab('questionnaire')}
             className={`px-5 py-3 border-b-2 transition flex items-center gap-2 shrink-0 ${
               activeTab === 'questionnaire'
@@ -657,6 +727,17 @@ export default function AdminDashboardPage() {
           >
             <Trash2 className="w-4 h-4 text-rose-500" />
             <span>Recycle Bin ({recycleBin.length})</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('fasttrackBin')}
+            className={`px-5 py-3 border-b-2 transition flex items-center gap-2 shrink-0 ${
+              activeTab === 'fasttrackBin'
+                ? 'border-rose-500 text-rose-600 dark:text-rose-400 font-bold'
+                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-rose-500'
+            }`}
+          >
+            <Trash2 className="w-4 h-4 text-rose-500" />
+            <span>Fast‑Track Recycle Bin ({fastTrackRecycleBin.length})</span>
           </button>
         </div>
 
@@ -727,12 +808,12 @@ export default function AdminDashboardPage() {
                         <tr key={sub.profile.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-900/40 transition">
                           <td className="py-4 px-4">
                             <div className="font-bold text-slate-900 dark:text-white text-sm">{sub.profile.name}</div>
-                            <div className="text-[11px] text-slate-400">{sub.profile.email} &bull; {sub.profile.school} ({sub.profile.grade})</div>
+                            <div className="text-[11px] text-slate-400">{sub.profile.email} &bull; {sub.profile.phone || 'No Phone'} &bull; {sub.profile.school} ({sub.profile.grade})</div>
                           </td>
 
                           <td className="py-4 px-4">
                             <span className="font-semibold text-orange-600 dark:text-orange-400">
-                              {sub.assessment.selectedCareerName || 'Not Finalized Yet'}
+                              {sub.assessment.selectedCareerNames?.join(', ') || sub.assessment.selectedCareerName || 'Not Finalized Yet'}
                             </span>
                           </td>
 
@@ -845,11 +926,11 @@ export default function AdminDashboardPage() {
                         <tr key={sub.profile.id} className="hover:bg-rose-500/5 transition">
                           <td className="py-4 px-4">
                             <div className="font-bold text-slate-900 dark:text-white text-sm">{sub.profile.name}</div>
-                            <div className="text-[11px] text-slate-400">{sub.profile.email} &bull; {sub.profile.school} ({sub.profile.grade})</div>
+                            <div className="text-[11px] text-slate-400">{sub.profile.email} &bull; {sub.profile.phone || 'No Phone'} &bull; {sub.profile.school} ({sub.profile.grade})</div>
                           </td>
 
                           <td className="py-4 px-4 font-semibold text-slate-700 dark:text-slate-300">
-                            {sub.assessment.selectedCareerName || 'N/A'}
+                            {sub.assessment.selectedCareerNames?.join(', ') || sub.assessment.selectedCareerName || 'N/A'}
                           </td>
 
                           <td className="py-4 px-4 text-center font-mono text-slate-400 text-[11px]">
@@ -881,6 +962,170 @@ export default function AdminDashboardPage() {
                   </tbody>
                 </table>
               </div>
+            </GlassCard>
+          </div>
+        )}
+
+        {/* TAB 1.75: FAST‑TRACK RECYCLE BIN */}
+        {activeTab === 'fasttrackBin' && (
+          <div className="space-y-6 animate-fadeIn">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-rose-500/5 dark:bg-rose-950/20 border border-rose-500/20 backdrop-blur-md">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-2xl bg-rose-500/10 text-rose-500">
+                  <Trash2 className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-bold text-slate-950 dark:text-white">Fast‑Track Recycle Bin</h3>
+                    <span className="px-2.5 py-0.5 rounded bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-mono font-bold">
+                      {fastTrackRecycleBin.length} Deleted Items
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Fast‑track submissions that were removed. You can restore them or delete permanently.
+                  </p>
+                </div>
+              </div>
+
+              {fastTrackRecycleBin.length > 0 && (
+                <button
+                  onClick={emptyFastTrackRecycleBin}
+                  className="px-4 py-2.5 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs transition shadow flex items-center justify-center gap-2 shrink-0"
+                >
+                  <AlertTriangle className="w-4 h-4" />
+                  <span>Empty Fast‑Track Bin</span>
+                </button>
+              )}
+            </div>
+
+            {/* RECYCLE BIN TABLE */}
+            <GlassCard className="p-0 border-rose-500/20 overflow-hidden shadow-xl">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-200 dark:border-slate-800 bg-rose-500/5 text-slate-500 dark:text-slate-400 uppercase font-mono">
+                      <th className="py-3.5 px-4">Deleted Fast‑Track Lead</th>
+                      <th className="py-3.5 px-4">Contact</th>
+                      <th className="py-3.5 px-4">Created At</th>
+                      <th className="py-3.5 px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                    {fastTrackRecycleBin.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="py-12 text-center text-slate-400 font-medium">Fast‑Track Recycle Bin is empty.</td>
+                      </tr>
+                    ) : (
+                      fastTrackRecycleBin.map((lead) => (
+                        <tr key={lead.id} className="hover:bg-rose-500/5 transition">
+                          <td className="py-4 px-4">
+                            <div className="font-bold text-slate-900 dark:text-white text-sm">{lead.name}</div>
+                            <div className="text-[11px] text-slate-400">{lead.email} • {lead.phone || 'No Phone'}</div>
+                          </td>
+                          <td className="py-4 px-4 text-sm text-slate-500 dark:text-slate-400">{lead.school || 'N/A'}</td>
+                          <td className="py-4 px-4 text-center text-[11px] text-slate-400">{new Date(lead.createdAt).toLocaleString()}</td>
+                          <td className="py-4 px-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              {/* Use handlers to update UI state and notify */}
+                              <button
+                                onClick={() => handleRestoreFastTrackFromBin(lead)}
+                                className="px-3 py-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 font-bold text-xs transition flex items-center gap-1"
+                              >
+                                <RotateCcw className="w-3.5 h-3.5" />
+                                <span>Restore</span>
+                              </button>
+                              <button
+                                onClick={() => handlePermanentDeleteFastTrack(lead)}
+                                className="px-3 py-1.5 rounded-lg bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs transition shadow flex items-center gap-1"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                <span>Delete Forever</span>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </GlassCard>
+          </div>
+        )}
+
+        {/* TAB 1.5: FAST-TRACK LEADS */}
+        {activeTab === 'fasttrack' && (
+          <div className="space-y-6 animate-fadeIn">
+            <GlassCard className="p-6 border-slate-200 dark:border-slate-800 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-950 dark:text-white">
+                    Fast-Track Career Alignment Leads
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Students who registered directly to stay connected and explore career guide documents.
+                  </p>
+                </div>
+                <div className="text-xs font-mono bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-lg text-slate-500">
+                  Total Connects: {fastTrackLeads.length}
+                </div>
+              </div>
+
+              {fastTrackLeads.length === 0 ? (
+                <div className="p-8 text-center text-xs text-slate-400">
+                  No fast-track connects yet.
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-slate-50 dark:bg-slate-900 text-slate-500 font-semibold border-b border-slate-200 dark:border-slate-800">
+                        <th className="p-4">Student</th>
+                        <th className="p-4">Contact Info</th>
+                        <th className="p-4">School & Grade</th>
+                        <th className="p-4">Selected Professions</th>
+                        <th className="p-4">Created At</th>
+                        <th className="p-4">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {fastTrackLeads.map((lead) => (
+                        <tr key={lead.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 text-slate-700 dark:text-slate-350">
+                          <td className="p-4">
+                            <span className="font-bold text-slate-900 dark:text-white block">{lead.name}</span>
+                            <span className="text-[10px] text-slate-400">{lead.id}</span>
+                          </td>
+                          <td className="p-4 space-y-0.5">
+                            <span className="block">{lead.email}</span>
+                            <span className="text-[10px] text-slate-400 block">{lead.phone}</span>
+                          </td>
+                          <td className="p-4">
+                            <span className="block">{lead.school}</span>
+                            <span className="text-[10px] text-orange-500 font-semibold block">{lead.grade}</span>
+                          </td>
+                          <td className="p-4">
+                            <div className="flex flex-wrap gap-1">
+                              {(lead.selectedCareers || []).map((car, idx) => (
+                                <span key={idx} className="px-2 py-0.5 rounded bg-orange-500/10 text-orange-600 dark:text-orange-400 text-[10px] font-semibold">
+                                  {car}
+                                </span>
+                              ))}
+                            </div>
+                          </td>
+                          <td className="p-4 text-[10px] text-slate-400">
+                            {new Date(lead.createdAt).toLocaleString()}
+                          </td>
+                          <td className="p-4 text-center">
+                            <button onClick={() => handleMoveFastTrackToBin(lead)} className="p-1.5 rounded text-slate-500 hover:text-rose-500 hover:bg-rose-500/10 transition">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </GlassCard>
           </div>
         )}
@@ -1026,6 +1271,18 @@ export default function AdminDashboardPage() {
                         ))}
                       </div>
                     </div>
+
+                    {c.pdfUrl ? (
+                      <div className="pt-2 flex items-center gap-1.5 text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span>✓ Info PDF Uploaded</span>
+                      </div>
+                    ) : (
+                      <div className="pt-2 flex items-center gap-1.5 text-[10px] text-slate-400">
+                        <span className="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-700"></span>
+                        <span>No PDF Uploaded</span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
@@ -1204,6 +1461,52 @@ export default function AdminDashboardPage() {
                     })}
                     className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white font-medium"
                   />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Career Info PDF Path / Filename</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. /software_engineer.pdf (from public folder)"
+                    value={editingCareer.pdfUrl || ''}
+                    onChange={(e) => setEditingCareer({ ...editingCareer, pdfUrl: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white font-medium mb-2"
+                  />
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="file"
+                      accept=".pdf"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setEditingCareer({
+                            ...editingCareer,
+                            pdfUrl: `/${file.name}`
+                          });
+                        }
+                      }}
+                      className="block w-full text-xs text-slate-500
+                        file:mr-4 file:py-2 file:px-4
+                        file:rounded-xl file:border-0
+                        file:text-xs file:font-semibold
+                        file:bg-orange-50 file:text-orange-700
+                        hover:file:bg-orange-100"
+                    />
+                    {editingCareer.pdfUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setEditingCareer({ ...editingCareer, pdfUrl: undefined })}
+                        className="px-3 py-2 rounded-xl bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 font-semibold"
+                      >
+                        Remove PDF
+                      </button>
+                    )}
+                  </div>
+                  {editingCareer.pdfUrl && (
+                    <p className="mt-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                      ✓ PDF Path is set to: {editingCareer.pdfUrl}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -1445,7 +1748,7 @@ export default function AdminDashboardPage() {
                     {/* Clear Student Information Cards */}
                     <div className="space-y-2">
                       <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Candidate Student Information</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-1">
                           <span className="text-slate-400 font-bold block uppercase tracking-wider text-[10px]">Student Full Name</span>
                           <p className="text-base font-extrabold text-slate-900 dark:text-white">{inspectDetail.profile.name}</p>
@@ -1454,6 +1757,11 @@ export default function AdminDashboardPage() {
                         <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-1">
                           <span className="text-slate-400 font-bold block uppercase tracking-wider text-[10px]">Parent / Student Email</span>
                           <p className="text-base font-bold text-slate-900 dark:text-white">{inspectDetail.profile.email}</p>
+                        </div>
+
+                        <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-1">
+                          <span className="text-slate-400 font-bold block uppercase tracking-wider text-[10px]">Contact Phone</span>
+                          <p className="text-base font-bold text-slate-900 dark:text-white">{inspectDetail.profile.phone || 'N/A'}</p>
                         </div>
 
                         <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-1">
@@ -1473,7 +1781,7 @@ export default function AdminDashboardPage() {
                       <div>
                         <span className="text-orange-500 font-bold uppercase tracking-wider text-[10px]">Selected Target Profession Path:</span>
                         <p className="text-xl font-extrabold text-orange-600 dark:text-orange-400 mt-0.5">
-                          {inspectDetail.assessment.selectedCareerName || 'Candidate has not finalized exit selection yet'}
+                          {inspectDetail.assessment.selectedCareerNames?.join(', ') || inspectDetail.assessment.selectedCareerName || 'Candidate has not finalized exit selection yet'}
                         </p>
                       </div>
 

@@ -9,7 +9,9 @@ import {
   ArrowRight, 
   RotateCcw,
   Check,
-  PartyPopper
+  PartyPopper,
+  Download,
+  AlertCircle
 } from 'lucide-react';
 import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
@@ -28,7 +30,7 @@ export default function CareerSelectionPage() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [assessment, setAssessment] = useState<AssessmentResult | null>(null);
-  const [selectedCareerId, setSelectedCareerId] = useState<string>('');
+  const [selectedCareerIds, setSelectedCareerIds] = useState<string[]>([]);
   const [isConfirmed, setIsConfirmed] = useState(false);
 
   useEffect(() => {
@@ -42,11 +44,14 @@ export default function CareerSelectionPage() {
     
     setAssessment(res);
 
-    if (res.selectedCareerId && res.exitTimestamp) {
-      setSelectedCareerId(res.selectedCareerId);
+    if (res.selectedCareerIds && res.selectedCareerIds.length > 0) {
+      setSelectedCareerIds(res.selectedCareerIds);
+      setIsConfirmed(true);
+    } else if (res.selectedCareerId) {
+      setSelectedCareerIds([res.selectedCareerId]);
       setIsConfirmed(true);
     } else {
-      setSelectedCareerId('');
+      setSelectedCareerIds([]);
       setIsConfirmed(false);
     }
 
@@ -70,15 +75,15 @@ export default function CareerSelectionPage() {
   }
 
   const handleConfirmSelection = async () => {
-    if (!assessment || !selectedCareerId) return;
-
-    const chosenCareer = assessment.topCareerMatches.find(c => c.id === selectedCareerId);
-    if (!chosenCareer) return;
+    const chosenCareers = assessment.topCareerMatches.filter(c => selectedCareerIds.includes(c.id));
+    if (chosenCareers.length === 0) return;
 
     const updatedResult: AssessmentResult = {
       ...assessment,
-      selectedCareerId: chosenCareer.id,
-      selectedCareerName: chosenCareer.title,
+      selectedCareerId: chosenCareers[0].id,
+      selectedCareerName: chosenCareers[0].title,
+      selectedCareerIds: chosenCareers.map(c => c.id),
+      selectedCareerNames: chosenCareers.map(c => c.title),
       exitTimestamp: new Date().toISOString(),
     };
 
@@ -91,14 +96,15 @@ export default function CareerSelectionPage() {
       id: assessment.studentId,
       name: assessment.studentName || 'Student Candidate',
       email: assessment.studentEmail || 'candidate@school.edu',
+      phone: '',
       school: 'Partner School',
       grade: 'Standard Grade',
       targetYear: '2028',
       createdAt: assessment.completedAt,
     };
 
-    // Generate READY'S Team Diagnostic Report
-    const readyReport = generateReadyDiagnosticReport(activeStudent, updatedResult.dimensionScores, chosenCareer);
+    // Generate READY'S Team Diagnostic Report (using the primary choice)
+    const readyReport = generateReadyDiagnosticReport(activeStudent, updatedResult.dimensionScores, chosenCareers[0]);
 
     // SAVE COMPLETE SUBMISSION DATA ONLY HERE AT FINAL SUBMIT
     const completeSubmissionDetail: StudentSubmissionDetail = {
@@ -123,7 +129,8 @@ export default function CareerSelectionPage() {
     }
   };
 
-  const selectedCareer = assessment.topCareerMatches.find(c => c.id === selectedCareerId);
+  const selectedCareers = assessment.topCareerMatches.filter(c => selectedCareerIds.includes(c.id));
+  const primaryCareer = selectedCareers[0];
 
   return (
     <div className="min-h-screen flex flex-col font-sans">
@@ -132,7 +139,7 @@ export default function CareerSelectionPage() {
       <main className="flex-1 mx-auto w-full max-w-7xl px-4 sm:px-6 py-8 sm:py-12">
         
         {/* SUCCESSFUL EXIT CONFIRMATION VIEW */}
-        {isConfirmed && selectedCareer ? (
+        {isConfirmed && selectedCareers.length > 0 && primaryCareer ? (
           <div className="max-w-4xl mx-auto space-y-8 animate-fadeIn">
             
             {/* Exit Banner */}
@@ -149,8 +156,15 @@ export default function CareerSelectionPage() {
                   Congratulations, {assessment.studentName}!
                 </h1>
                 <p className="text-sm text-slate-600 dark:text-slate-300">
-                  You have successfully chosen your target career path: <strong className="text-orange-500">{selectedCareer.title}</strong>
+                  You have successfully chosen your target career {selectedCareers.length === 1 ? 'path' : 'paths'}:
                 </p>
+                <div className="flex flex-wrap gap-2 justify-center pt-2">
+                  {selectedCareers.map(c => (
+                    <span key={c.id} className="px-3.5 py-1.5 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-600 dark:text-orange-400 font-extrabold text-sm">
+                      {c.title}
+                    </span>
+                  ))}
+                </div>
               </div>
             </GlassCard>
 
@@ -178,9 +192,46 @@ export default function CareerSelectionPage() {
                 </div>
 
                 <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
-                  <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Chosen Profession Path:</span>
-                  <p className="text-base font-bold text-orange-500">{selectedCareer.title}</p>
-                  <p className="text-xs text-slate-400">{selectedCareer.category}</p>
+                  <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Primary Chosen Path:</span>
+                  <p className="text-base font-bold text-orange-500">{primaryCareer.title}</p>
+                  <p className="text-xs text-slate-400">{primaryCareer.category}</p>
+                </div>
+              </div>
+
+              {/* Selected Career Info PDFs & Downloads */}
+              <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-800">
+                <h3 className="text-base font-bold text-slate-950 dark:text-white flex items-center gap-2">
+                  <Download className="w-5 h-5 text-orange-500" />
+                  <span>Download Selected Career Guides & Handouts</span>
+                </h3>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {selectedCareers.map((c) => (
+                    <div key={c.id} className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex flex-col justify-between gap-3 shadow-sm">
+                      <div>
+                        <span className="px-2 py-0.5 rounded bg-orange-500/10 text-orange-600 dark:text-orange-400 text-[9px] font-mono font-bold uppercase">
+                          {c.badge}
+                        </span>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white mt-1">{c.title}</h4>
+                      </div>
+                      <div>
+                        {c.pdfUrl ? (
+                          <a
+                            href={c.pdfUrl}
+                            download={`${c.title.replace(/\s+/g, '_')}_Official_READY_Guide.pdf`}
+                            className="w-full py-2 px-3 rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-sm"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                            <span>Download Career PDF</span>
+                          </a>
+                        ) : (
+                          <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800/80 text-center text-[10px] text-slate-400 border border-slate-200/60 dark:border-slate-800">
+                            No additional PDF uploaded by admin
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
 
@@ -192,7 +243,7 @@ export default function CareerSelectionPage() {
                 </h3>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {(selectedCareer.recommendedRoadmap || []).map((step, idx) => (
+                  {(primaryCareer.recommendedRoadmap || []).map((step, idx) => (
                     <div key={idx} className="p-3.5 rounded-xl bg-white/70 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 flex items-start gap-3">
                       <span className="w-6 h-6 rounded-lg bg-orange-500/10 text-orange-500 font-mono text-xs font-bold flex items-center justify-center shrink-0">
                         {idx + 1}
@@ -234,22 +285,32 @@ export default function CareerSelectionPage() {
                 <span>Assessment Complete</span>
               </div>
               <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-950 dark:text-white">
-                Select Your Profession Path
+                Select Your Profession Paths
               </h1>
               <p className="text-sm text-slate-600 dark:text-slate-300">
-                Please click to choose the profession option below that interests you most, then click <strong className="text-orange-500">Confirm & Select Profession</strong>.
+                Please click to choose up to <strong className="text-orange-500">3 profession options</strong> below that interest you most, then click <strong className="text-orange-500">Confirm & Select Profession</strong>.
               </p>
             </div>
 
             {/* Career Cards Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {assessment.topCareerMatches.map((career) => {
-                const isSelected = selectedCareerId === career.id;
+                const isSelected = selectedCareerIds.includes(career.id);
 
                 return (
                   <GlassCard
                     key={career.id}
-                    onClick={() => setSelectedCareerId(career.id)}
+                    onClick={() => {
+                      if (isSelected) {
+                        setSelectedCareerIds(selectedCareerIds.filter(id => id !== career.id));
+                      } else {
+                        if (selectedCareerIds.length >= 3) {
+                          alert('You can select a maximum of 3 professions.');
+                          return;
+                        }
+                        setSelectedCareerIds([...selectedCareerIds, career.id]);
+                      }
+                    }}
                     className={`p-6 space-y-5 cursor-pointer transition-all duration-300 ${
                       isSelected
                         ? 'border-2 border-orange-500 ring-4 ring-orange-500/20 bg-white dark:bg-slate-900 shadow-xl scale-[1.02]'
@@ -319,19 +380,19 @@ export default function CareerSelectionPage() {
               <div>
                 <h4 className="text-base font-bold text-slate-900 dark:text-white">Ready to Finalize Your Selection?</h4>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {selectedCareer ? (
-                    <>Target Profession: <strong className="text-orange-500">{selectedCareer.title}</strong></>
+                  {selectedCareers.length > 0 ? (
+                    <>Selected: <strong className="text-orange-500">{selectedCareers.map(c => c.title).join(', ')}</strong></>
                   ) : (
-                    <span className="text-amber-500 font-semibold">Please click on a profession card above to choose your option.</span>
+                    <span className="text-amber-500 font-semibold">Please click on up to 3 profession cards above to choose your options.</span>
                   )}
                 </p>
               </div>
 
               <button
                 onClick={handleConfirmSelection}
-                disabled={!selectedCareerId}
+                disabled={selectedCareerIds.length === 0}
                 className={`w-full sm:w-auto px-8 py-3.5 rounded-xl font-extrabold text-sm transition shadow-lg flex items-center justify-center gap-2 ${
-                  selectedCareerId 
+                  selectedCareerIds.length > 0 
                     ? 'bg-gradient-to-r from-orange-500 via-rose-500 to-amber-500 hover:from-orange-600 hover:to-rose-600 text-white cursor-pointer'
                     : 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
                 }`}

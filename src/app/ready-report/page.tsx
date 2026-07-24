@@ -12,6 +12,7 @@ import {
   LogOut,
   User,
   Mail,
+  Phone,
   GraduationCap,
   Calendar,
   Award,
@@ -276,6 +277,14 @@ export default function ReadyReportPage() {
 
                 <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
                   <span className="text-slate-400 flex items-center gap-1.5 font-semibold">
+                    <Phone className="w-3.5 h-3.5 text-orange-500" />
+                    Contact Phone:
+                  </span>
+                  <p className="font-bold text-slate-900 dark:text-white text-sm">{profile.phone || 'N/A'}</p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
+                  <span className="text-slate-400 flex items-center gap-1.5 font-semibold">
                     <GraduationCap className="w-3.5 h-3.5 text-orange-500" />
                     Institution:
                   </span>
@@ -290,7 +299,7 @@ export default function ReadyReportPage() {
                   <p className="font-bold text-slate-900 dark:text-white text-sm">{profile.grade}</p>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1 sm:col-span-2">
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
                   <span className="text-slate-400 flex items-center gap-1.5 font-semibold">
                     <Award className="w-3.5 h-3.5 text-emerald-500" />
                     Selected Exit Career Path:
