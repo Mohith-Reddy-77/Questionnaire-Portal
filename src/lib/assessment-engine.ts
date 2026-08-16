@@ -10,7 +10,7 @@ import { questionnaireQuestions, careerCatalog } from './mock-data';
 import { getCustomCareers } from './storage';
 
 export const calculateDimensionScores = (
-  answers: Record<string, string>,
+  answers: Record<string, any>,
   questions: QuestionnaireQuestion[] = questionnaireQuestions
 ): Record<DimensionKey, number> => {
   const totals: Record<DimensionKey, number> = {
@@ -39,12 +39,26 @@ export const calculateDimensionScores = (
       });
     });
 
-    const selectedOptionId = answers[q.id];
-    if (selectedOptionId) {
-      const chosenOpt = q.options.find((o) => o.id === selectedOptionId);
-      if (chosenOpt) {
-        (Object.keys(chosenOpt.dimensionWeights) as DimensionKey[]).forEach((dim) => {
-          totals[dim] += chosenOpt.dimensionWeights[dim] || 0;
+    const answer = answers[q.id];
+    if (answer) {
+      if (Array.isArray(answer)) {
+        answer.forEach((optId) => {
+          const chosenOpt = q.options.find((o) => o.id === optId);
+          if (chosenOpt) {
+            (Object.keys(chosenOpt.dimensionWeights) as DimensionKey[]).forEach((dim) => {
+              totals[dim] += chosenOpt.dimensionWeights[dim] || 0;
+            });
+          }
+        });
+      } else if (typeof answer === 'string') {
+        const optIds = answer.includes(',') ? answer.split(',') : [answer];
+        optIds.forEach((optId) => {
+          const chosenOpt = q.options.find((o) => o.id === optId);
+          if (chosenOpt) {
+            (Object.keys(chosenOpt.dimensionWeights) as DimensionKey[]).forEach((dim) => {
+              totals[dim] += chosenOpt.dimensionWeights[dim] || 0;
+            });
+          }
         });
       }
     }

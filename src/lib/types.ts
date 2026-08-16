@@ -18,6 +18,8 @@ export type StudentProfile = {
   createdAt?: string;
 };
 
+export type QuestionType = 'mcq' | 'msq' | 'paragraph' | 'scaling';
+
 export type QuestionnaireOption = {
   id: string;
   label: string;
@@ -30,7 +32,12 @@ export type QuestionnaireQuestion = {
   category: string;
   question: string;
   subtitle?: string;
+  type?: QuestionType;
   options: QuestionnaireOption[];
+  minLabel?: string;
+  maxLabel?: string;
+  minValue?: number;
+  maxValue?: number;
 };
 
 export type CareerProfile = {
@@ -59,7 +66,7 @@ export type AssessmentResult = {
   studentName?: string;
   studentEmail?: string;
   completedAt: string;
-  answers: Record<string, string>; // questionId -> optionId
+  answers: Record<string, any>; // questionId -> optionId (string), optionIds (string[]), rating (string), or text response
   dimensionScores: Record<DimensionKey, number>;
   topCareerMatches: CareerMatch[];
   selectedCareerId?: string;

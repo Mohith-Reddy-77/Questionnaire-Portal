@@ -61,7 +61,7 @@ import {
   permanentlyDeleteFastTrack,
   emptyFastTrackRecycleBin
 } from '@/lib/storage';
-import { StudentSubmissionDetail, QuestionnaireQuestion, CareerProfile, DimensionKey, ReadyDiagnosticReport, FastTrackSubmission } from '@/lib/types';
+import { StudentSubmissionDetail, QuestionnaireQuestion, CareerProfile, DimensionKey, ReadyDiagnosticReport, FastTrackSubmission, QuestionType } from '@/lib/types';
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -94,6 +94,14 @@ export default function AdminDashboardPage() {
   // Questionnaire Management State
   const [questions, setQuestions] = useState<QuestionnaireQuestion[]>([]);
   const [editingQuestion, setEditingQuestion] = useState<QuestionnaireQuestion | null>(null);
+  const [baseWeights, setBaseWeights] = useState<Record<DimensionKey, number>>({
+    analytical: 0,
+    technical: 0,
+    research: 0,
+    creative: 0,
+    leadership: 0,
+    communication: 0
+  });
 
   // Career Options Management State
   const [careers, setCareers] = useState<CareerProfile[]>([]);
@@ -234,17 +242,36 @@ export default function AdminDashboardPage() {
 
     const questionsLogHTML = questions.map((q, idx) => {
       const chosenOptId = sub.assessment.answers[q.id];
-      const chosenOpt = q.options.find(o => o.id === chosenOptId);
+      let answerText = 'No response logged';
+      
+      if (q.type === 'msq') {
+        const selectedList = Array.isArray(chosenOptId) ? chosenOptId : [];
+        const labels = selectedList.map(id => q.options.find(o => o.id === id)?.label || id);
+        answerText = labels.length > 0 ? labels.join(', ') : 'No response logged';
+      } else if (q.type === 'paragraph') {
+        answerText = chosenOptId || 'No response logged';
+      } else if (q.type === 'scaling') {
+        const chosenOpt = q.options.find(o => o.id === chosenOptId);
+        if (chosenOpt) {
+          answerText = `${chosenOpt.label} (Range: ${q.minValue ?? 1}-${q.maxValue ?? 5}${q.minLabel || q.maxLabel ? `, ${q.minLabel || 'Low'} to ${q.maxLabel || 'High'}` : ''})`;
+        } else {
+          answerText = chosenOptId || 'No response logged';
+        }
+      } else {
+        const chosenOpt = q.options.find(o => o.id === chosenOptId);
+        answerText = chosenOpt ? chosenOpt.label : 'No response logged';
+      }
+
       return `
         <div style="margin-bottom: 12px; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; background-color: #f8fafc;">
           <div style="font-weight: bold; color: #ea580c; font-size: 11px; font-family: monospace;">
-            Q${idx + 1} (${q.category}):
+            Q${idx + 1} (${q.category}) [${(q.type || 'mcq').toUpperCase()}]:
           </div>
           <div style="font-weight: bold; color: #0f172a; font-size: 13px; margin: 4px 0;">
             ${q.question}
           </div>
-          <div style="font-size: 12px; color: #334155; margin-top: 6px; padding: 6px 10px; background-color: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px;">
-            <strong>Selected Answer:</strong> ${chosenOpt ? chosenOpt.label : 'No response logged'}
+          <div style="font-size: 12px; color: #334155; margin-top: 6px; padding: 6px 10px; background-color: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; white-space: pre-wrap;">
+            <strong>Response:</strong> ${answerText}
           </div>
         </div>
       `;
@@ -412,6 +439,7 @@ export default function AdminDashboardPage() {
       category: 'Problem Solving & Exploration',
       question: 'New Question Prompt...',
       subtitle: 'Select the option that feels most like you.',
+      type: 'mcq',
       options: [
         {
           id: `${newId}-a`,
@@ -425,18 +453,47 @@ export default function AdminDashboardPage() {
         },
       ],
     };
+    setBaseWeights({ analytical: 0, technical: 0, research: 0, creative: 0, leadership: 0, communication: 0 });
     setEditingQuestion(newQ);
   };
 
   const handleSaveQuestion = () => {
     if (!editingQuestion) return;
-    const existingIndex = questions.findIndex(q => q.id === editingQuestion.id);
+
+    let finalQuestion = { ...editingQuestion };
+
+    if (finalQuestion.type === 'scaling') {
+      const min = finalQuestion.minValue ?? 1;
+      let max = finalQuestion.maxValue ?? 5;
+      if (max < min) max = min + 1;
+      
+      const generatedOptions = [];
+      const range = max - min;
+      for (let val = min; val <= max; val++) {
+        const ratio = range === 0 ? 1 : (val - min) / range;
+        const optWeights: Record<string, number> = {};
+        (['analytical', 'technical', 'research', 'creative', 'leadership', 'communication']).forEach(dim => {
+          optWeights[dim] = Math.round((baseWeights[dim as DimensionKey] || 0) * ratio);
+        });
+        
+        generatedOptions.push({
+          id: `${finalQuestion.id}-scale-${val}`,
+          label: `${val}`,
+          dimensionWeights: optWeights as any
+        });
+      }
+      finalQuestion.options = generatedOptions;
+    } else if (finalQuestion.type === 'paragraph') {
+      finalQuestion.options = [];
+    }
+
+    const existingIndex = questions.findIndex(q => q.id === finalQuestion.id);
     let updatedList: QuestionnaireQuestion[] = [];
     if (existingIndex >= 0) {
       updatedList = [...questions];
-      updatedList[existingIndex] = editingQuestion;
+      updatedList[existingIndex] = finalQuestion;
     } else {
-      updatedList = [...questions, editingQuestion];
+      updatedList = [...questions, finalQuestion];
     }
     setQuestions(updatedList);
     saveCustomQuestions(updatedList);
@@ -1167,45 +1224,111 @@ export default function AdminDashboardPage() {
                         Q{idx + 1}
                       </span>
                       <div>
-                        <span className="text-[10px] font-mono font-bold text-orange-500 uppercase">
-                          Category: {q.category}
+                        <span className="text-[10px] font-mono font-bold text-orange-500 uppercase flex items-center gap-1.5 flex-wrap">
+                          <span>Category: {q.category}</span>
+                          <span>&bull;</span>
+                          <span className="px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-600 dark:text-orange-400 font-bold uppercase text-[9px]">
+                            {q.type || 'mcq'}
+                          </span>
                         </span>
-                        <h4 className="text-base font-bold text-slate-900 dark:text-white">{q.question}</h4>
+                        <h4 className="text-base font-bold text-slate-900 dark:text-white mt-0.5">{q.question}</h4>
                       </div>
                     </div>
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setEditingQuestion({ ...q })}
-                        className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-100 text-xs font-semibold transition flex items-center gap-1"
-                      >
-                        <Edit3 className="w-3.5 h-3.5 text-orange-500" />
-                        <span>Edit</span>
-                      </button>
-
-                      <button
-                        onClick={() => handleDeleteQuestion(q.id)}
-                        className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-500/10 transition"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {q.subtitle && (
-                    <p className="text-xs text-slate-500 dark:text-slate-400 pl-11">{q.subtitle}</p>
-                  )}
-
-                  <div className="pl-11 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                    {q.options.map((opt, oIdx) => (
-                      <div key={opt.id} className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex items-start gap-2">
-                        <span className="font-mono font-bold text-slate-400 text-[11px] shrink-0">
-                          {String.fromCharCode(65 + oIdx)}.
-                        </span>
-                        <span className="text-slate-700 dark:text-slate-300">{opt.label}</span>
-                      </div>
-                    ))}
-                  </div>
+ 
+                     <div className="flex items-center gap-2">
+                       <button
+                         onClick={() => {
+                           setEditingQuestion({ ...q });
+                           if (q.type === 'scaling') {
+                             const lastOpt = q.options[q.options.length - 1];
+                             setBaseWeights(lastOpt ? { ...lastOpt.dimensionWeights } : { analytical: 0, technical: 0, research: 0, creative: 0, leadership: 0, communication: 0 });
+                           } else {
+                             setBaseWeights({ analytical: 0, technical: 0, research: 0, creative: 0, leadership: 0, communication: 0 });
+                           }
+                         }}
+                         className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-100 text-xs font-semibold transition flex items-center gap-1"
+                       >
+                         <Edit3 className="w-3.5 h-3.5 text-orange-500" />
+                         <span>Edit</span>
+                       </button>
+ 
+                       <button
+                         onClick={() => handleDeleteQuestion(q.id)}
+                         className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-500/10 transition"
+                       >
+                         <Trash2 className="w-4 h-4" />
+                       </button>
+                     </div>
+                   </div>
+ 
+                   {q.subtitle && (
+                     <p className="text-xs text-slate-500 dark:text-slate-400 pl-11">{q.subtitle}</p>
+                   )}
+ 
+                   <div className="pl-11 text-xs">
+                     {(!q.type || q.type === 'mcq' || q.type === 'msq') && (
+                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                         {q.options.map((opt, oIdx) => {
+                           const weightsStr = Object.entries(opt.dimensionWeights || {})
+                             .filter(([_, w]) => w > 0)
+                             .map(([k, w]) => `${k[0].toUpperCase()}${k.slice(1, 3)}:${w}`)
+                             .join(', ');
+ 
+                           return (
+                             <div key={opt.id} className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex flex-col gap-1">
+                               <div className="flex items-start gap-2">
+                                 <span className="font-mono font-bold text-slate-400 text-[11px] shrink-0">
+                                   {q.type === 'msq' ? '☐' : `${String.fromCharCode(65 + oIdx)}.`}
+                                 </span>
+                                 <span className="text-slate-700 dark:text-slate-300 font-medium">{opt.label}</span>
+                               </div>
+                               {weightsStr && (
+                                 <span className="text-[9px] font-mono text-slate-400 dark:text-slate-505 pl-5">
+                                   Weights &rarr; {weightsStr}
+                                 </span>
+                               )}
+                             </div>
+                           );
+                         })}
+                       </div>
+                     )}
+ 
+                     {q.type === 'paragraph' && (
+                       <div className="p-3 rounded-xl bg-slate-50/50 dark:bg-slate-800/30 border border-dashed border-slate-200 dark:border-slate-800 text-slate-400 italic font-medium">
+                         Open-ended text box response (counselor report only)
+                       </div>
+                     )}
+ 
+                     {q.type === 'scaling' && (() => {
+                       const min = q.minValue ?? 1;
+                       const max = q.maxValue ?? 5;
+                       const lastOpt = q.options[q.options.length - 1];
+                       const maxWeightsStr = lastOpt ? Object.entries(lastOpt.dimensionWeights || {})
+                         .filter(([_, w]) => w > 0)
+                         .map(([k, w]) => `${k[0].toUpperCase()}${k.slice(1, 3)}:${w}`)
+                         .join(', ') : '';
+ 
+                       return (
+                         <div className="p-3.5 rounded-xl bg-slate-50/50 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-700 space-y-2">
+                           <div className="flex items-center gap-2 flex-wrap text-slate-700 dark:text-slate-300 font-semibold">
+                             <span>
+                               Scale {min} to {max}
+                             </span>
+                             {(q.minLabel || q.maxLabel) && (
+                               <span className="text-slate-400 font-medium text-[11px]">
+                                 ({q.minLabel || 'Low'} &rarr; {q.maxLabel || 'High'})
+                               </span>
+                             )}
+                           </div>
+                           {maxWeightsStr && (
+                             <div className="text-[10px] font-mono text-slate-400 dark:text-slate-500">
+                               Base Weights (at max rating) &rarr; {maxWeightsStr}
+                             </div>
+                           )}
+                         </div>
+                       );
+                     })()}
+                   </div>
                 </GlassCard>
               ))}
             </div>
@@ -1577,67 +1700,219 @@ export default function AdminDashboardPage() {
                   />
                 </div>
 
-                <div className="space-y-3 pt-2">
-                  <div className="flex items-center justify-between">
-                    <label className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[11px]">
-                      Multiple Choice Options ({editingQuestion.options.length})
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Question Type</label>
+                  <select
+                    value={editingQuestion.type || 'mcq'}
+                    onChange={(e) => {
+                      const newType = e.target.value as QuestionType;
+                      const updated: QuestionnaireQuestion = {
+                        ...editingQuestion,
+                        type: newType,
+                      };
+                      if (newType === 'scaling') {
+                        updated.minValue = updated.minValue ?? 1;
+                        updated.maxValue = updated.maxValue ?? 5;
+                        updated.minLabel = updated.minLabel ?? 'Strongly Disagree';
+                        updated.maxLabel = updated.maxLabel ?? 'Strongly Agree';
+                        const lastOpt = editingQuestion.options[editingQuestion.options.length - 1];
+                        setBaseWeights(lastOpt ? { ...lastOpt.dimensionWeights } : { analytical: 0, technical: 0, research: 0, creative: 0, leadership: 0, communication: 0 });
+                      }
+                      setEditingQuestion(updated);
+                    }}
+                    className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  >
+                    <option value="mcq">Multiple Choice (MCQ - Single Select)</option>
+                    <option value="msq">Multiple Select (MSQ - Multi Select)</option>
+                    <option value="paragraph">Paragraph (Open Text Response)</option>
+                    <option value="scaling">Scaling (Likert / Rating scale)</option>
+                  </select>
+                </div>
+
+                {(!editingQuestion.type || editingQuestion.type === 'mcq' || editingQuestion.type === 'msq') && (
+                  <div className="space-y-3 pt-2">
+                    <div className="flex items-center justify-between">
+                      <label className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[11px]">
+                        Multiple Choice Options ({editingQuestion.options.length})
+                      </label>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const optId = `${editingQuestion.id}-opt-${editingQuestion.options.length + 1}`;
+                          setEditingQuestion({
+                            ...editingQuestion,
+                            options: [
+                              ...editingQuestion.options,
+                              {
+                                id: optId,
+                                label: 'New Option...',
+                                dimensionWeights: { analytical: 1, technical: 1, research: 0, creative: 0, leadership: 0, communication: 0 },
+                              },
+                            ],
+                          });
+                        }}
+                        className="px-3 py-1 rounded-lg bg-orange-500/10 text-orange-600 font-bold text-[11px]"
+                      >
+                        + Add Choice Option
+                      </button>
+                    </div>
+
+                    {editingQuestion.options.map((opt, oIdx) => (
+                      <div key={opt.id} className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-orange-500 font-mono">Option {String.fromCharCode(65 + oIdx)}</span>
+                          {editingQuestion.options.length > 2 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingQuestion({
+                                  ...editingQuestion,
+                                  options: editingQuestion.options.filter((_, i) => i !== oIdx),
+                                });
+                              }}
+                              className="text-rose-500 hover:text-rose-700 text-[11px] font-bold"
+                            >
+                              Remove
+                            </button>
+                          )}
+                        </div>
+
+                        <input
+                          type="text"
+                          value={opt.label}
+                          onChange={(e) => {
+                            const newOpts = [...editingQuestion.options];
+                            newOpts[oIdx] = { ...opt, label: e.target.value };
+                            setEditingQuestion({ ...editingQuestion, options: newOpts });
+                          }}
+                          className="w-full p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white font-medium"
+                        />
+
+                        {/* WEIGHTS EDITOR GRID */}
+                        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 pt-2 border-t border-slate-205 dark:border-slate-800">
+                          {(['analytical', 'technical', 'research', 'creative', 'leadership', 'communication'] as DimensionKey[]).map((dim) => (
+                            <div key={dim} className="space-y-1">
+                              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider capitalize text-center">{dim.slice(0, 4)}</label>
+                              <input
+                                type="number"
+                                min={0}
+                                max={10}
+                                value={opt.dimensionWeights?.[dim] || 0}
+                                onChange={(e) => {
+                                  const newOpts = [...editingQuestion.options];
+                                  const val = parseInt(e.target.value) || 0;
+                                  newOpts[oIdx] = {
+                                    ...opt,
+                                    dimensionWeights: {
+                                      ...opt.dimensionWeights,
+                                      [dim]: val,
+                                    },
+                                  };
+                                  setEditingQuestion({ ...editingQuestion, options: newOpts });
+                                }}
+                                className="w-full p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded text-center text-xs font-semibold text-slate-900 dark:text-white"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {editingQuestion.type === 'paragraph' && (
+                  <div className="p-4 rounded-2xl bg-orange-50/50 dark:bg-slate-800/30 border border-dashed border-orange-200 dark:border-orange-900 text-center space-y-1">
+                    <p className="font-bold text-orange-600 dark:text-orange-400">Paragraph Question Mode</p>
+                    <p className="text-slate-500 dark:text-slate-400">
+                      Students will see a large free-text input box. No choice options or dimension weights are configured for paragraph questions.
+                    </p>
+                  </div>
+                )}
+
+                {editingQuestion.type === 'scaling' && (
+                  <div className="space-y-4 pt-2">
+                    <label className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[11px] block">
+                      Scale Range & Extreme Labels
                     </label>
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const optId = `${editingQuestion.id}-opt-${editingQuestion.options.length + 1}`;
-                        setEditingQuestion({
-                          ...editingQuestion,
-                          options: [
-                            ...editingQuestion.options,
-                            {
-                              id: optId,
-                              label: 'New Option...',
-                              dimensionWeights: { analytical: 1, technical: 1, research: 0, creative: 0, leadership: 0, communication: 0 },
-                            },
-                          ],
-                        });
-                      }}
-                      className="px-3 py-1 rounded-lg bg-orange-500/10 text-orange-600 font-bold text-[11px]"
-                    >
-                      + Add Choice Option
-                    </button>
-                  </div>
-
-                  {editingQuestion.options.map((opt, oIdx) => (
-                    <div key={opt.id} className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-orange-500 font-mono">Option {String.fromCharCode(65 + oIdx)}</span>
-                        {editingQuestion.options.length > 2 && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditingQuestion({
-                                ...editingQuestion,
-                                options: editingQuestion.options.filter((_, i) => i !== oIdx),
-                              });
-                            }}
-                            className="text-rose-500 hover:text-rose-700 text-[11px] font-bold"
-                          >
-                            Remove
-                          </button>
-                        )}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Min Value</label>
+                        <input
+                          type="number"
+                          value={editingQuestion.minValue ?? 1}
+                          onChange={(e) => setEditingQuestion({ ...editingQuestion, minValue: parseInt(e.target.value) || 1 })}
+                          className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white font-medium"
+                        />
                       </div>
-
-                      <input
-                        type="text"
-                        value={opt.label}
-                        onChange={(e) => {
-                          const newOpts = [...editingQuestion.options];
-                          newOpts[oIdx].label = e.target.value;
-                          setEditingQuestion({ ...editingQuestion, options: newOpts });
-                        }}
-                        className="w-full p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white font-medium"
-                      />
+                      <div>
+                        <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Max Value</label>
+                        <input
+                          type="number"
+                          value={editingQuestion.maxValue ?? 5}
+                          onChange={(e) => setEditingQuestion({ ...editingQuestion, maxValue: parseInt(e.target.value) || 5 })}
+                          className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white font-medium"
+                        />
+                      </div>
                     </div>
-                  ))}
-                </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Min Label (Left Side)</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Strongly Disagree"
+                          value={editingQuestion.minLabel || ''}
+                          onChange={(e) => setEditingQuestion({ ...editingQuestion, minLabel: e.target.value })}
+                          className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white font-medium"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Max Label (Right Side)</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Strongly Agree"
+                          value={editingQuestion.maxLabel || ''}
+                          onChange={(e) => setEditingQuestion({ ...editingQuestion, maxLabel: e.target.value })}
+                          className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white font-medium"
+                        />
+                      </div>
+                    </div>
+
+                    {/* BASE WEIGHTS EDITOR GRID FOR SCALING */}
+                    <div className="space-y-2 pt-2">
+                      <label className="block font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[11px]">
+                        Base Dimension Weights (Full Rating / Max Value)
+                      </label>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                        Weights will be linearly distributed down to the minimum rating value.
+                      </p>
+                      
+                      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 pt-2 border border-slate-205 dark:border-slate-800 p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/50">
+                        {(['analytical', 'technical', 'research', 'creative', 'leadership', 'communication'] as DimensionKey[]).map((dim) => (
+                          <div key={dim} className="space-y-1">
+                            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider capitalize text-center">{dim.slice(0, 4)}</label>
+                            <input
+                              type="number"
+                              min={0}
+                              max={10}
+                              value={baseWeights[dim] || 0}
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value) || 0;
+                                setBaseWeights({
+                                  ...baseWeights,
+                                  [dim]: val,
+                                });
+                              }}
+                              className="w-full p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded text-center text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
@@ -1810,26 +2085,76 @@ export default function AdminDashboardPage() {
 
                     <div className="space-y-3">
                       {questions.map((q, idx) => {
-                        const chosenOptId = inspectDetail.assessment.answers[q.id];
-                        const chosenOpt = q.options.find(o => o.id === chosenOptId);
+                        const answer = inspectDetail.assessment.answers[q.id];
+                        let contentToRender = null;
+                        let rawSelectionText = 'N/A';
+
+                        if (q.type === 'msq') {
+                          const selectedList = Array.isArray(answer) ? answer : [];
+                          rawSelectionText = selectedList.length > 0 ? selectedList.join(', ') : 'N/A';
+                          contentToRender = selectedList.length > 0 ? (
+                            <div className="space-y-1">
+                              {selectedList.map((id) => {
+                                const opt = q.options.find(o => o.id === id);
+                                return (
+                                  <div key={id} className="flex items-center gap-2">
+                                    <span className="text-orange-500 font-bold font-mono">☑</span>
+                                    <span>{opt ? opt.label : id}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <span className="text-slate-400 italic">No option selected</span>
+                          );
+                        } else if (q.type === 'paragraph') {
+                          rawSelectionText = answer ? 'Written Response' : 'N/A';
+                          contentToRender = answer ? (
+                            <div className="whitespace-pre-wrap">{answer}</div>
+                          ) : (
+                            <span className="text-slate-400 italic">No response written</span>
+                          );
+                        } else if (q.type === 'scaling') {
+                          const scaleOpt = q.options.find(o => o.id === answer);
+                          rawSelectionText = answer || 'N/A';
+                          contentToRender = scaleOpt ? (
+                            <div className="flex items-center gap-2">
+                              <span className="px-2.5 py-1 rounded bg-orange-500 text-white font-bold">{scaleOpt.label}</span>
+                              <span className="text-slate-400 text-xs font-medium">
+                                (Scale range: {q.minValue ?? 1} to {q.maxValue ?? 5} {q.minLabel || q.maxLabel ? `| ${q.minLabel || 'Low'} to ${q.maxLabel || 'High'}` : ''})
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-slate-400 italic">No rating selected</span>
+                          );
+                        } else {
+                          const chosenOpt = q.options.find(o => o.id === answer);
+                          rawSelectionText = answer || 'N/A';
+                          contentToRender = chosenOpt ? (
+                            <span>{chosenOpt.label}</span>
+                          ) : (
+                            <span className="text-slate-400 italic">No option selected</span>
+                          );
+                        }
 
                         return (
                           <div key={q.id} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-2">
                             <div className="flex items-center justify-between">
-                              <span className="font-mono text-orange-500 font-bold">Q{idx + 1}: {q.category}</span>
-                              <span className="px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-mono text-[10px]">
-                                Selected Option: {chosenOptId || 'N/A'}
+                              <span className="font-mono text-orange-500 font-bold flex items-center gap-2">
+                                <span>Q{idx + 1}: {q.category}</span>
+                                <span className="px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-600 dark:text-orange-400 text-[9px] uppercase tracking-wider font-extrabold font-mono">
+                                  {q.type || 'mcq'}
+                                </span>
+                              </span>
+                              <span className="px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-mono text-[10px] max-w-[200px] truncate">
+                                Answer ID: {rawSelectionText}
                               </span>
                             </div>
 
                             <p className="font-bold text-slate-900 dark:text-white">{q.question}</p>
 
                             <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-medium">
-                              {chosenOpt ? (
-                                <span>{chosenOpt.label}</span>
-                              ) : (
-                                <span className="text-slate-400 italic">No response logged</span>
-                              )}
+                              {contentToRender}
                             </div>
                           </div>
                         );

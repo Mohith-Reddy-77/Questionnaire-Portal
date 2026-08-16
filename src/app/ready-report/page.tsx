@@ -325,16 +325,64 @@ export default function ReadyReportPage() {
 
               <div className="space-y-4">
                 {activeQuestions.map((q, idx) => {
-                  const chosenOptId = assessment.answers[q.id];
-                  const chosenOpt = q.options.find(o => o.id === chosenOptId);
-                  const optionIdx = q.options.findIndex(o => o.id === chosenOptId);
-                  const optionLetter = optionIdx >= 0 ? String.fromCharCode(65 + optionIdx) : '-';
+                  const answer = assessment.answers[q.id];
+                  let contentToRender = null;
+                  let optionLetter = '-';
+
+                  if (q.type === 'msq') {
+                    const selectedList = Array.isArray(answer) ? answer : [];
+                    contentToRender = selectedList.length > 0 ? (
+                      <div className="space-y-1">
+                        {selectedList.map((id) => {
+                          const opt = q.options.find(o => o.id === id);
+                          return (
+                            <div key={id} className="flex items-center gap-2">
+                              <span className="text-orange-500 font-bold font-mono">☑</span>
+                              <span>{opt ? opt.label : id}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <span className="text-slate-400 italic">No options selected</span>
+                    );
+                  } else if (q.type === 'paragraph') {
+                    contentToRender = answer ? (
+                      <div className="whitespace-pre-wrap">{answer}</div>
+                    ) : (
+                      <span className="text-slate-400 italic">No response written</span>
+                    );
+                  } else if (q.type === 'scaling') {
+                    const scaleOpt = q.options.find(o => o.id === answer);
+                    optionLetter = scaleOpt ? scaleOpt.label : '-';
+                    contentToRender = scaleOpt ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-slate-400 text-xs font-medium">
+                          (Scale range: {q.minValue ?? 1} to {q.maxValue ?? 5} {q.minLabel || q.maxLabel ? `| ${q.minLabel || 'Low'} to ${q.maxLabel || 'High'}` : ''})
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-slate-400 italic">No rating selected</span>
+                    );
+                  } else {
+                    const chosenOpt = q.options.find(o => o.id === answer);
+                    const optionIdx = q.options.findIndex(o => o.id === answer);
+                    optionLetter = optionIdx >= 0 ? String.fromCharCode(65 + optionIdx) : '-';
+                    contentToRender = chosenOpt ? (
+                      <span>{chosenOpt.label}</span>
+                    ) : (
+                      <span className="text-slate-400 italic">No option selected</span>
+                    );
+                  }
 
                   return (
                     <div key={q.id} className="p-5 rounded-2xl bg-slate-50/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="px-2.5 py-0.5 rounded bg-orange-500/10 text-orange-600 dark:text-orange-400 font-mono text-xs font-bold uppercase">
-                          Question {idx + 1} &bull; {q.category}
+                        <span className="px-2.5 py-0.5 rounded bg-orange-500/10 text-orange-600 dark:text-orange-400 font-mono text-xs font-bold uppercase flex items-center gap-2">
+                          <span>Question {idx + 1} &bull; {q.category}</span>
+                          <span className="px-1.5 py-0.2 rounded bg-orange-500/10 text-orange-600 dark:text-orange-400 text-[9px] uppercase tracking-wider font-extrabold font-mono">
+                            {q.type || 'mcq'}
+                          </span>
                         </span>
                         <span className="text-xs font-mono font-bold text-slate-400">
                           ID: {q.id}
@@ -346,15 +394,23 @@ export default function ReadyReportPage() {
                       </h4>
 
                       <div className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-start gap-3">
-                        <div className="w-6 h-6 rounded-lg bg-orange-500 text-white font-mono font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
-                          {optionLetter}
-                        </div>
-                        <div className="text-xs text-slate-800 dark:text-slate-200 font-medium pt-0.5">
-                          {chosenOpt ? (
-                            <span>{chosenOpt.label}</span>
-                          ) : (
-                            <span className="text-slate-400 italic">No option selected</span>
-                          )}
+                        {(q.type === 'scaling' || !q.type || q.type === 'mcq') && (
+                          <div className="w-6 h-6 rounded-lg bg-orange-500 text-white font-mono font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
+                            {optionLetter}
+                          </div>
+                        )}
+                        {q.type === 'msq' && (
+                          <div className="w-6 h-6 rounded-lg bg-orange-500 text-white font-mono font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
+                            ☑
+                          </div>
+                        )}
+                        {q.type === 'paragraph' && (
+                          <div className="w-6 h-6 rounded-lg bg-orange-500 text-white font-mono font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
+                            ✎
+                          </div>
+                        )}
+                        <div className="text-xs text-slate-800 dark:text-slate-200 font-medium pt-0.5 flex-1">
+                          {contentToRender}
                         </div>
                       </div>
                     </div>

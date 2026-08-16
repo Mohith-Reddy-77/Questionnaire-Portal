@@ -32,7 +32,7 @@ export default function AssessmentPage() {
   const [student, setStudent] = useState<StudentProfile | null>(null);
   const [questions, setQuestions] = useState<QuestionnaireQuestion[]>([]);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answers, setAnswers] = useState<Record<string, any>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -69,16 +69,28 @@ export default function AssessmentPage() {
   const currentQuestion = questions[currentStepIndex];
   const totalQuestions = questions.length;
   const progressPercent = Math.round(((currentStepIndex + 1) / totalQuestions) * 100);
-  const selectedOptionId = answers[currentQuestion?.id || ''];
 
-  const handleSelectOption = (optionId: string) => {
-    const updated = { ...answers, [currentQuestion.id]: optionId };
-    setAnswers(updated);
-    saveQuestionnaireAnswers(updated);
+  const isQuestionAnswered = (q: QuestionnaireQuestion): boolean => {
+    if (!q) return false;
+    const answer = answers[q.id];
+    const qType = q.type || 'mcq';
+    if (qType === 'mcq') {
+      return typeof answer === 'string' && answer.length > 0;
+    }
+    if (qType === 'msq') {
+      return Array.isArray(answer) && answer.length > 0;
+    }
+    if (qType === 'paragraph') {
+      return typeof answer === 'string' && answer.trim().length > 0;
+    }
+    if (qType === 'scaling') {
+      return typeof answer === 'string' && answer.length > 0;
+    }
+    return false;
   };
 
   const handleNext = () => {
-    if (!selectedOptionId) return;
+    if (!isQuestionAnswered(currentQuestion)) return;
 
     if (currentStepIndex < totalQuestions - 1) {
       setCurrentStepIndex((prev) => prev + 1);
@@ -193,43 +205,164 @@ export default function AssessmentPage() {
               )}
             </div>
 
-            {/* MULTIPLE CHOICE OPTIONS GRID */}
-            <div className="space-y-3 pt-2">
-              {currentQuestion.options.map((option, idx) => {
-                const isSelected = selectedOptionId === option.id;
-                const optionLetter = String.fromCharCode(65 + idx); // A, B, C, D
+            {/* CONDITIONAL OPTIONS/INPUT RENDERING */}
+            {(!currentQuestion.type || currentQuestion.type === 'mcq') && (
+              <div className="space-y-3 pt-2">
+                {currentQuestion.options.map((option, idx) => {
+                  const isSelected = answers[currentQuestion.id] === option.id;
+                  const optionLetter = String.fromCharCode(65 + idx);
 
-                return (
-                  <div
-                    key={option.id}
-                    onClick={() => handleSelectOption(option.id)}
-                    className={`p-4 sm:p-5 rounded-2xl border cursor-pointer transition-all duration-200 flex items-start gap-4 ${
-                      isSelected
-                        ? 'bg-orange-500/10 border-orange-500 ring-2 ring-orange-500/20 text-slate-950 dark:text-white shadow-md'
-                        : 'bg-white/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-orange-300 dark:hover:border-orange-900 hover:bg-slate-50 dark:hover:bg-slate-800/80'
-                    }`}
-                  >
-                    <div 
-                      className={`w-7 h-7 rounded-xl flex items-center justify-center font-mono font-bold text-xs shrink-0 transition ${
-                        isSelected 
-                          ? 'bg-orange-500 text-white shadow-sm' 
-                          : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                  return (
+                    <div
+                      key={option.id}
+                      onClick={() => {
+                        const updated = { ...answers, [currentQuestion.id]: option.id };
+                        setAnswers(updated);
+                        saveQuestionnaireAnswers(updated);
+                      }}
+                      className={`p-4 sm:p-5 rounded-2xl border cursor-pointer transition-all duration-200 flex items-start gap-4 ${
+                        isSelected
+                          ? 'bg-orange-500/10 border-orange-500 ring-2 ring-orange-500/20 text-slate-950 dark:text-white shadow-md'
+                          : 'bg-white/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-orange-300 dark:hover:border-orange-900 hover:bg-slate-50 dark:hover:bg-slate-800/80'
                       }`}
                     >
-                      {optionLetter}
-                    </div>
+                      <div 
+                        className={`w-7 h-7 rounded-xl flex items-center justify-center font-mono font-bold text-xs shrink-0 transition ${
+                          isSelected 
+                            ? 'bg-orange-500 text-white shadow-sm' 
+                            : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                        }`}
+                      >
+                        {optionLetter}
+                      </div>
 
-                    <div className="flex-1 text-xs sm:text-sm font-medium leading-relaxed pt-0.5">
-                      {option.label}
-                    </div>
+                      <div className="flex-1 text-xs sm:text-sm font-medium leading-relaxed pt-0.5">
+                        {option.label}
+                      </div>
 
-                    {isSelected && (
-                      <CheckCircle2 className="w-5 h-5 text-orange-500 shrink-0 mt-0.5" />
-                    )}
+                      {isSelected && (
+                        <CheckCircle2 className="w-5 h-5 text-orange-500 shrink-0 mt-0.5" />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {currentQuestion.type === 'msq' && (
+              <div className="space-y-3 pt-2">
+                <p className="text-xs text-slate-400 dark:text-slate-500 italic mb-2">Note: You can select multiple options for this question.</p>
+                {currentQuestion.options.map((option, idx) => {
+                  const currentList = Array.isArray(answers[currentQuestion.id]) ? answers[currentQuestion.id] : [];
+                  const isSelected = currentList.includes(option.id);
+                  const optionLetter = String.fromCharCode(65 + idx);
+
+                  return (
+                    <div
+                      key={option.id}
+                      onClick={() => {
+                        const updatedList = isSelected
+                          ? currentList.filter((id: string) => id !== option.id)
+                          : [...currentList, option.id];
+                        const updated = { ...answers, [currentQuestion.id]: updatedList };
+                        setAnswers(updated);
+                        saveQuestionnaireAnswers(updated);
+                      }}
+                      className={`p-4 sm:p-5 rounded-2xl border cursor-pointer transition-all duration-200 flex items-start gap-4 ${
+                        isSelected
+                          ? 'bg-orange-500/10 border-orange-500 ring-2 ring-orange-500/20 text-slate-950 dark:text-white shadow-md'
+                          : 'bg-white/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-orange-300 dark:hover:border-orange-900 hover:bg-slate-50 dark:hover:bg-slate-800/80'
+                      }`}
+                    >
+                      <div 
+                        className={`w-7 h-7 rounded-xl flex items-center justify-center font-mono font-bold text-xs shrink-0 transition ${
+                          isSelected 
+                            ? 'bg-orange-500 text-white shadow-sm' 
+                            : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                        }`}
+                      >
+                        {optionLetter}
+                      </div>
+
+                      <div className="flex-1 text-xs sm:text-sm font-medium leading-relaxed pt-0.5">
+                        {option.label}
+                      </div>
+
+                      <div className={`w-5 h-5 rounded border-2 shrink-0 mt-0.5 flex items-center justify-center transition ${
+                        isSelected ? 'border-orange-500 bg-orange-500 text-white' : 'border-slate-300 dark:border-slate-700'
+                      }`}>
+                        {isSelected && <span className="text-[10px]">✔</span>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {currentQuestion.type === 'paragraph' && (
+              <div className="space-y-3 pt-2">
+                <textarea
+                  rows={6}
+                  value={answers[currentQuestion.id] || ''}
+                  onChange={(e) => {
+                    const updated = { ...answers, [currentQuestion.id]: e.target.value };
+                    setAnswers(updated);
+                    saveQuestionnaireAnswers(updated);
+                  }}
+                  placeholder="Please type your response details here..."
+                  className="w-full p-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-orange-500 focus:outline-none placeholder-slate-400 transition"
+                />
+              </div>
+            )}
+
+            {currentQuestion.type === 'scaling' && (() => {
+              const minValue = currentQuestion.minValue ?? 1;
+              const maxValue = currentQuestion.maxValue ?? 5;
+              const selectedValId = answers[currentQuestion.id];
+              
+              const scaleValues = [];
+              for (let i = minValue; i <= maxValue; i++) {
+                scaleValues.push(i);
+              }
+
+              return (
+                <div className="space-y-6 pt-4">
+                  {(currentQuestion.minLabel || currentQuestion.maxLabel) && (
+                    <div className="flex justify-between items-center text-xs font-bold text-slate-500 dark:text-slate-400 px-1">
+                      <span>{currentQuestion.minLabel || 'Low'}</span>
+                      <span>{currentQuestion.maxLabel || 'High'}</span>
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap justify-center items-center gap-3">
+                    {scaleValues.map((val) => {
+                      const scaleOpt = currentQuestion.options.find(o => o.label === String(val)) || currentQuestion.options[val - minValue];
+                      const optId = scaleOpt?.id || `${currentQuestion.id}-scale-${val}`;
+                      const isSelected = selectedValId === optId;
+
+                      return (
+                        <button
+                          key={val}
+                          type="button"
+                          onClick={() => {
+                            const updated = { ...answers, [currentQuestion.id]: optId };
+                            setAnswers(updated);
+                            saveQuestionnaireAnswers(updated);
+                          }}
+                          className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl border font-bold text-sm sm:text-base flex items-center justify-center transition-all duration-200 shadow-sm ${
+                            isSelected
+                              ? 'bg-orange-500 border-orange-500 text-white ring-4 ring-orange-500/20 scale-[1.08]'
+                              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-orange-400 dark:hover:border-orange-800 hover:bg-orange-50/30'
+                          }`}
+                        >
+                          {val}
+                        </button>
+                      );
+                    })}
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              );
+            })()}
 
             {/* Action Bar */}
             <div className="pt-6 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-4 flex-wrap">
@@ -253,7 +386,7 @@ export default function AssessmentPage() {
 
                 <button
                   onClick={handleNext}
-                  disabled={!selectedOptionId || isSubmitting}
+                  disabled={!isQuestionAnswered(currentQuestion) || isSubmitting}
                   className="px-6 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white text-xs font-bold transition shadow-md flex items-center gap-2"
                 >
                   {isSubmitting ? (
