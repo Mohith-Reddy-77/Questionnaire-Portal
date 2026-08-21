@@ -7,7 +7,9 @@ import {
   Sun, 
   Moon, 
   Compass,
-  ShieldCheck
+  ShieldCheck,
+  Info,
+  ClipboardCheck
 } from 'lucide-react';
 import { isAdminAuthenticated } from '@/lib/storage';
 
@@ -78,6 +80,30 @@ export const Navbar = () => {
           >
             <Compass className="w-3.5 h-3.5 text-orange-500" />
             <span>Home</span>
+          </Link>
+
+          <Link
+            href="/about-us"
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full border transition-all duration-200 ${
+              pathname === '/about-us'
+                ? 'border-orange-500 bg-orange-500/10 text-orange-600 dark:text-orange-400 font-bold shadow-sm'
+                : 'border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 text-slate-700 dark:text-slate-300 hover:border-orange-300 dark:hover:border-orange-900'
+            }`}
+          >
+            <Info className="w-3.5 h-3.5 text-orange-500" />
+            <span>About Us</span>
+          </Link>
+
+          <Link
+            href="/questionaaire"
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full border transition-all duration-200 ${
+              pathname === '/questionaaire'
+                ? 'border-orange-500 bg-orange-500/10 text-orange-600 dark:text-orange-400 font-bold shadow-sm'
+                : 'border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 text-slate-700 dark:text-slate-300 hover:border-orange-300 dark:hover:border-orange-900'
+            }`}
+          >
+            <ClipboardCheck className="w-3.5 h-3.5 text-orange-500" />
+            <span>Assessment Portal</span>
           </Link>
 
           {isAdmin && (

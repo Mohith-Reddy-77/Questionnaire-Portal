@@ -40,7 +40,7 @@ export default function AssessmentPage() {
     const activeStudent = getCurrentStudent();
     if (!activeStudent) {
       // Direct URL access forbidden: must start from Landing Page setup!
-      router.replace('/');
+      router.replace('/questionaaire');
       return;
     }
     setStudent(activeStudent);

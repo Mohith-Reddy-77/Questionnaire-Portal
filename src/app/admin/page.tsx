@@ -108,6 +108,7 @@ export default function AdminDashboardPage() {
   const [editingCareer, setEditingCareer] = useState<CareerProfile | null>(null);
   const [notificationMsg, setNotificationMsg] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isUploadingCareerPdf, setIsUploadingCareerPdf] = useState(false);
 
   const handleManualRefresh = async () => {
     setIsRefreshing(true);
@@ -214,6 +215,24 @@ export default function AdminDashboardPage() {
     logoutAdmin();
     setIsAdmin(false);
     setInspectDetail(null);
+  };
+
+  const uploadCareerPdf = async (careerId: string, file: File) => {
+    const formData = new FormData();
+    formData.append('careerId', careerId);
+    formData.append('file', file);
+
+    const res = await fetch('/api/career-pdfs', {
+      method: 'POST',
+      body: formData,
+    });
+
+    const data = await res.json();
+    if (!res.ok || !data?.pdfUrl) {
+      throw new Error(data?.error || 'Upload failed');
+    }
+
+    return data.pdfUrl as string;
   };
 
   const handleOpenInspect = (sub: StudentSubmissionDetail) => {
@@ -1587,10 +1606,10 @@ export default function AdminDashboardPage() {
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Career Info PDF Path / Filename</label>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Career Info PDF (Supabase Storage URL)</label>
                   <input
                     type="text"
-                    placeholder="e.g. /software_engineer.pdf (from public folder)"
+                    placeholder="Uploaded file URL appears here"
                     value={editingCareer.pdfUrl || ''}
                     onChange={(e) => setEditingCareer({ ...editingCareer, pdfUrl: e.target.value })}
                     className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white font-medium mb-2"
@@ -1599,13 +1618,25 @@ export default function AdminDashboardPage() {
                     <input
                       type="file"
                       accept=".pdf"
-                      onChange={(e) => {
+                      disabled={isUploadingCareerPdf}
+                      onChange={async (e) => {
                         const file = e.target.files?.[0];
                         if (file) {
-                          setEditingCareer({
-                            ...editingCareer,
-                            pdfUrl: `/${file.name}`
-                          });
+                          try {
+                            setIsUploadingCareerPdf(true);
+                            const uploadedUrl = await uploadCareerPdf(editingCareer.id, file);
+                            setEditingCareer({
+                              ...editingCareer,
+                              pdfUrl: uploadedUrl,
+                            });
+                            triggerNotification('Career PDF uploaded to Supabase storage successfully.');
+                          } catch (err) {
+                            console.error(err);
+                            triggerNotification('Failed to upload PDF to cloud storage.');
+                          } finally {
+                            setIsUploadingCareerPdf(false);
+                            e.target.value = '';
+                          }
                         }
                       }}
                       className="block w-full text-xs text-slate-500
@@ -1615,6 +1646,9 @@ export default function AdminDashboardPage() {
                         file:bg-orange-50 file:text-orange-700
                         hover:file:bg-orange-100"
                     />
+                    {isUploadingCareerPdf && (
+                      <span className="text-[11px] text-orange-600 dark:text-orange-400 font-semibold">Uploading...</span>
+                    )}
                     {editingCareer.pdfUrl && (
                       <button
                         type="button"
@@ -1627,7 +1661,7 @@ export default function AdminDashboardPage() {
                   </div>
                   {editingCareer.pdfUrl && (
                     <p className="mt-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
-                      ✓ PDF Path is set to: {editingCareer.pdfUrl}
+                      ✓ Cloud PDF URL is set to: {editingCareer.pdfUrl}
                     </p>
                   )}
                 </div>

@@ -38,7 +38,7 @@ export default function CareerSelectionPage() {
     const res = getAssessmentResult();
     if (!res || !res.topCareerMatches || res.topCareerMatches.length === 0) {
       // Direct URL access forbidden: must complete assessment from Landing Page!
-      router.replace('/');
+      router.replace('/questionaaire');
       return;
     }
     
@@ -218,7 +218,8 @@ export default function CareerSelectionPage() {
                         {c.pdfUrl ? (
                           <a
                             href={c.pdfUrl}
-                            download={`${c.title.replace(/\s+/g, '_')}_Official_READY_Guide.pdf`}
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className="w-full py-2 px-3 rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-sm"
                           >
                             <Download className="w-3.5 h-3.5" />
@@ -265,7 +266,7 @@ export default function CareerSelectionPage() {
                 </button>
 
                 <button
-                  onClick={() => router.push('/')}
+                  onClick={() => router.push('/questionaaire')}
                   className="px-6 py-3 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-bold transition shadow-lg flex items-center gap-2"
                 >
                   <span>Complete & Return Home</span>
