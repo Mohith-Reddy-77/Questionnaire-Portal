@@ -83,6 +83,70 @@ export default function MarketingLandingPage() {
             />
           </div>
         </div>
+        {/* Statistics grid bar */}
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-md">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 divide-y sm:divide-y-0 sm:divide-x divide-slate-200">
+              
+              {/* Stat 1 */}
+              <div className="flex items-start gap-3.5 pb-4 sm:pb-0 sm:pr-4">
+                <div className="p-2.5 bg-orange-100 text-orange-600 rounded-xl">
+                  <TrendingUp className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-extrabold text-slate-950 leading-none">85%</h3>
+                  <p className="text-[10px] text-slate-500 font-semibold mt-1">of jobs in 2030 don't exist yet.</p>
+                  <span className="text-[8px] font-bold text-slate-400">Source: World Economic Forum</span>
+                </div>
+              </div>
+
+              {/* Stat 2 */}
+              <div className="flex items-start gap-3.5 pt-4 sm:pt-0 sm:pl-4 sm:pr-4">
+                <div className="p-2.5 bg-orange-100 text-orange-600 rounded-xl">
+                  <Award className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-extrabold text-slate-950 leading-none">2x</h3>
+                  <p className="text-[10px] text-slate-500 font-semibold mt-1">more likely to stay in school with real-world learning.</p>
+                  <span className="text-[8px] font-bold text-slate-400">Source: Attendance Works</span>
+                </div>
+              </div>
+
+              {/* Stat 3 */}
+              <div className="flex items-start gap-3.5 pt-4 sm:pt-0 sm:pl-4 sm:pr-4">
+                <div className="p-2.5 bg-orange-100 text-orange-600 rounded-xl">
+                  <Target className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-extrabold text-slate-950 leading-none">70%</h3>
+                  <p className="text-[10px] text-slate-500 font-semibold mt-1">of employers value practical experience over grades.</p>
+                  <span className="text-[8px] font-bold text-slate-400">Source: NACE</span>
+                </div>
+              </div>
+
+              {/* Stat 4 */}
+              <div className="flex items-start gap-3.5 pt-4 sm:pt-0 sm:pl-4 sm:pr-4">
+                <div className="p-2.5 bg-orange-100 text-orange-600 rounded-xl">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-extrabold text-slate-950 leading-none">1 Exp</h3>
+                  <p className="text-[10px] text-slate-500 font-semibold mt-1">can be the moment that changes everything.</p>
+                </div>
+              </div>
+
+              {/* Stat 5 */}
+              <div className="flex items-start gap-3.5 pt-4 sm:pt-0 sm:pl-4">
+                <div className="p-2.5 bg-orange-100 text-orange-600 rounded-xl">
+                  <Globe className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-extrabold text-slate-950 leading-none uppercase tracking-wide">Stronger Together</h4>
+                  <p className="text-[10px] text-slate-500 font-semibold mt-1">Better prepared students build a better future.</p>
+                </div>
+              </div>
+
+            </div>
+          </div>
       </section>
 
       {/* SECTION 2: THE PROBLEM */}
@@ -562,71 +626,6 @@ export default function MarketingLandingPage() {
               </div>
             </div>
 
-          </div>
-
-          {/* Statistics grid bar */}
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-md">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 divide-y sm:divide-y-0 sm:divide-x divide-slate-200">
-              
-              {/* Stat 1 */}
-              <div className="flex items-start gap-3.5 pb-4 sm:pb-0 sm:pr-4">
-                <div className="p-2.5 bg-orange-100 text-orange-600 rounded-xl">
-                  <TrendingUp className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-2xl font-extrabold text-slate-950 leading-none">85%</h3>
-                  <p className="text-[10px] text-slate-500 font-semibold mt-1">of jobs in 2030 don't exist yet.</p>
-                  <span className="text-[8px] font-bold text-slate-400">Source: World Economic Forum</span>
-                </div>
-              </div>
-
-              {/* Stat 2 */}
-              <div className="flex items-start gap-3.5 pt-4 sm:pt-0 sm:pl-4 sm:pr-4">
-                <div className="p-2.5 bg-orange-100 text-orange-600 rounded-xl">
-                  <Award className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-2xl font-extrabold text-slate-950 leading-none">2x</h3>
-                  <p className="text-[10px] text-slate-500 font-semibold mt-1">more likely to stay in school with real-world learning.</p>
-                  <span className="text-[8px] font-bold text-slate-400">Source: Attendance Works</span>
-                </div>
-              </div>
-
-              {/* Stat 3 */}
-              <div className="flex items-start gap-3.5 pt-4 sm:pt-0 sm:pl-4 sm:pr-4">
-                <div className="p-2.5 bg-orange-100 text-orange-600 rounded-xl">
-                  <Target className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-2xl font-extrabold text-slate-950 leading-none">70%</h3>
-                  <p className="text-[10px] text-slate-500 font-semibold mt-1">of employers value practical experience over grades.</p>
-                  <span className="text-[8px] font-bold text-slate-400">Source: NACE</span>
-                </div>
-              </div>
-
-              {/* Stat 4 */}
-              <div className="flex items-start gap-3.5 pt-4 sm:pt-0 sm:pl-4 sm:pr-4">
-                <div className="p-2.5 bg-orange-100 text-orange-600 rounded-xl">
-                  <Sparkles className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-2xl font-extrabold text-slate-950 leading-none">1 Exp</h3>
-                  <p className="text-[10px] text-slate-500 font-semibold mt-1">can be the moment that changes everything.</p>
-                </div>
-              </div>
-
-              {/* Stat 5 */}
-              <div className="flex items-start gap-3.5 pt-4 sm:pt-0 sm:pl-4">
-                <div className="p-2.5 bg-orange-100 text-orange-600 rounded-xl">
-                  <Globe className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-extrabold text-slate-950 leading-none uppercase tracking-wide">Stronger Together</h4>
-                  <p className="text-[10px] text-slate-500 font-semibold mt-1">Better prepared students build a better future.</p>
-                </div>
-              </div>
-
-            </div>
           </div>
 
         </div>

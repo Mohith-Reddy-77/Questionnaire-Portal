@@ -39,7 +39,7 @@ export default function QuestionaaireLandingPage() {
     email: '',
     phone: '',
     school: '',
-    grade: '6th Grade',
+    grade: '8th Grade',
     targetYear: '2028',
   });
 
@@ -173,14 +173,14 @@ export default function QuestionaaireLandingPage() {
             </h1>
 
             <p className="text-base sm:text-lg text-slate-600 leading-relaxed font-medium max-w-xl">
-              Designed specially for school students (Grades 3 to 12). Discover your natural talents, explore exciting future professions, and align your interests.
+              Designed specially for school students (Grades 8 to 12). Discover your natural talents, explore exciting future professions, and align your interests.
             </p>
 
             {/* Quick Action Badges */}
             <div className="flex items-center gap-4 text-xs font-semibold text-slate-500 flex-wrap pt-2">
               <div className="flex items-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                <span>Tailored for Grades 3rd - 12th</span>
+                <span>Tailored for Grades 8th - 12th</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-500" />
@@ -304,11 +304,6 @@ export default function QuestionaaireLandingPage() {
                       onChange={(e) => setFormData({ ...formData, grade: e.target.value })}
                       className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500 font-semibold"
                     >
-                      <option value="3rd Grade">3rd Grade</option>
-                      <option value="4th Grade">4th Grade</option>
-                      <option value="5th Grade">5th Grade</option>
-                      <option value="6th Grade">6th Grade</option>
-                      <option value="7th Grade">7th Grade</option>
                       <option value="8th Grade">8th Grade</option>
                       <option value="9th Grade">9th Grade</option>
                       <option value="10th Grade">10th Grade</option>
