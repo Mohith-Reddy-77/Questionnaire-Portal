@@ -60,6 +60,94 @@ export default function AboutUsPage() {
               </GlassCard>
             </div>
 
+            <div className="rounded-[32px] border border-orange-200 bg-[#fffaf6] p-3 shadow-[0_20px_50px_rgba(15,23,42,0.06)] sm:p-4">
+              <div className="grid grid-cols-12 gap-3 sm:gap-4">
+                <div className="col-span-12 md:col-span-7 overflow-hidden rounded-[28px] ring-1 ring-orange-100 bg-slate-100">
+                  <img
+                    src="/WhatsApp Image 2026-08-24 at 9.49.24 PM.jpeg"
+                    alt="READY students and mentors working together"
+                    className="h-[270px] w-full object-cover sm:h-[330px] md:h-[430px]"
+                  />
+                </div>
+
+                <div className="col-span-12 md:col-span-5 grid grid-cols-2 gap-3 sm:gap-4">
+                  <div className="col-span-1 overflow-hidden rounded-[24px] ring-1 ring-orange-100 bg-slate-100">
+                    <img
+                      src="/WhatsApp Image 2026-08-24 at 9.49.25 PM (1).jpeg"
+                      alt="Students engaging in career guidance"
+                      className="h-[150px] w-full object-cover sm:h-[180px]"
+                    />
+                  </div>
+
+                  <div className="col-span-1 overflow-hidden rounded-[24px] ring-1 ring-orange-100 bg-slate-100">
+                    <img
+                      src="/WhatsApp Image 2026-08-24 at 9.49.25 PM (2).jpeg"
+                      alt="Learning and mentoring moments"
+                      className="h-[150px] w-full object-cover sm:h-[180px]"
+                    />
+                  </div>
+
+                  <div className="col-span-1 overflow-hidden rounded-[24px] ring-1 ring-orange-100 bg-slate-100">
+                    <img
+                      src="/WhatsApp Image 2026-08-24 at 9.49.24 PM (1).jpeg"
+                      alt="Students with READY mentors"
+                      className="h-[150px] w-full object-cover sm:h-[180px]"
+                    />
+                  </div>
+
+                  <div className="col-span-1 overflow-hidden rounded-[24px] ring-1 ring-orange-100 bg-slate-100">
+                    <img
+                      src="/WhatsApp Image 2026-08-24 at 9.49.25 PM.jpeg"
+                      alt="Career guidance session"
+                      className="h-[150px] w-full object-cover sm:h-[180px]"
+                    />
+                  </div>
+                </div>
+
+                <div className="col-span-12 sm:col-span-4 overflow-hidden rounded-[24px] ring-1 ring-orange-100 bg-slate-100">
+                  <img
+                    src="/WhatsApp Image 2026-08-24 at 9.49.26 PM.jpeg"
+                    alt="READY community support"
+                    className="h-[130px] w-full object-cover sm:h-[170px]"
+                  />
+                </div>
+
+                <div className="col-span-12 sm:col-span-4 overflow-hidden rounded-[24px] ring-1 ring-orange-100 bg-slate-100">
+                  <img
+                    src="/WhatsApp Image 2026-08-24 at 9.49.25 PM (3).jpeg"
+                    alt="READY community and student support"
+                    className="h-[130px] w-full object-cover sm:h-[170px]"
+                  />
+                </div>
+
+                <div className="col-span-12 sm:col-span-4 overflow-hidden rounded-[24px] ring-1 ring-orange-100 bg-slate-100">
+                  <img
+                    src="/WhatsApp Image 2026-08-24 at 9.49.26 PM (1).jpeg"
+                    alt="Students building future goals"
+                    className="h-[130px] w-full object-cover sm:h-[170px]"
+                  />
+                </div>
+
+                <div className="col-span-12 md:col-span-7 overflow-hidden rounded-[26px] ring-1 ring-orange-100 bg-slate-100">
+                  <img
+                    src="/WhatsApp Image 2026-08-24 at 9.49.26 PM (2).jpeg"
+                    alt="READY guidance and motivation"
+                    className="h-[160px] w-full object-cover sm:h-[200px]"
+                  />
+                </div>
+
+                <div className="col-span-12 md:col-span-5 overflow-hidden rounded-[26px] ring-1 ring-orange-100 bg-slate-100">
+                  <img
+                    src="/WhatsApp Image 2026-08-24 at 9.49.25 PM (1).jpeg"
+                    alt="READY mentorship and confidence"
+                    className="h-[160px] w-full object-cover sm:h-[200px]"
+                  />
+                </div>
+              </div>
+            </div>
+
+
+
             <GlassCard className="p-7 sm:p-9 border-slate-200 dark:border-slate-800">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div>
