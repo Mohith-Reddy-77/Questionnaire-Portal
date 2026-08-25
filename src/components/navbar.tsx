@@ -58,13 +58,7 @@ export const Navbar = () => {
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xl font-bebas tracking-[0.18em] text-slate-950 dark:text-white uppercase leading-none">READY</span>
-              <span className="px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider rounded-md bg-gradient-to-r from-orange-500 to-rose-500 text-white">
-                Assessment
-              </span>
             </div>
-            <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 leading-none mt-1">
-              Student Career Assessment Portal
-            </p>
           </div>
         </Link>
 
