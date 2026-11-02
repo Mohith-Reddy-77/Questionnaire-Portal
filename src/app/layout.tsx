@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { MotionProvider } from '@/components/site/reveal';
 
 export const metadata: Metadata = {
   title: 'Ready | Questionnaire & Career Diagnostic Portal',
@@ -19,7 +20,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="scroll-smooth">
       <body className="min-h-screen antialiased selection:bg-orange-500 selection:text-white">
-        {children}
+        <MotionProvider>{children}</MotionProvider>
       </body>
     </html>
   );

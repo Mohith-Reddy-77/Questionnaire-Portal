@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Caveat:wght@600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Fraunces:opsz,wght@9..144,400;9..144,500&family=Caveat:wght@600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -103,6 +103,15 @@ a {
   font-family: 'Caveat', cursive;
 }
 
+.font-fraunces {
+  font-family: 'Fraunces', Georgia, 'Times New Roman', serif;
+}
+
+/* Keep anchored sections clear of the sticky navbar */
+section[id] {
+  scroll-margin-top: 5rem;
+}
+
 .animate-float {
   animation: float 4s ease-in-out infinite;
 }
@@ -128,4 +137,20 @@ a {
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(148, 163, 184, 0.6);
+}
+
+/* Testimonials strip: content drifts left to right; the track holds two copies, so -50% loops seamlessly */
+@keyframes marquee-right {
+  from { transform: translateX(-50%); }
+  to { transform: translateX(0); }
+}
+
+.animate-marquee-right {
+  animation: marquee-right 40s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee-right {
+    animation: none;
+  }
 }

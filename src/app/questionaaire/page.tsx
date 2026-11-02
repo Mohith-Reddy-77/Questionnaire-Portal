@@ -13,7 +13,6 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { Navbar } from '@/components/navbar';
-import { Footer } from '@/components/footer';
 import { GlassCard } from '@/components/ui/glass-card';
 import {
   saveCurrentStudent,
@@ -361,7 +360,6 @@ export default function QuestionaaireLandingPage() {
 
       </main>
 
-      <Footer />
     </div>
   );
 }

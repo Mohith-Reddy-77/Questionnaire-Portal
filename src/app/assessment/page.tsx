@@ -13,7 +13,6 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { Navbar } from '@/components/navbar';
-import { Footer } from '@/components/footer';
 import { GlassCard } from '@/components/ui/glass-card';
 import { 
   getCurrentStudent, 
@@ -411,7 +410,6 @@ export default function AssessmentPage() {
 
       </main>
 
-      <Footer />
     </div>
   );
 }

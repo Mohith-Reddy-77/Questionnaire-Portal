@@ -29,6 +29,14 @@ create table if not exists fasttrack_submissions (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
+-- Messages from the website "Get In Touch" form (written by /api/contact with the service role key)
+create table if not exists contact_messages (
+  id text primary key,
+  payload jsonb not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+alter table contact_messages enable row level security;
+
 -- Enable RLS for fasttrack_submissions
 alter table fasttrack_submissions enable row level security;
 create policy "Allow fasttrack_submissions" on fasttrack_submissions for all using (true);
