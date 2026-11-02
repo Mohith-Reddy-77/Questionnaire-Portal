@@ -28,7 +28,6 @@ import {
   Sparkles
 } from 'lucide-react';
 import { Navbar } from '@/components/navbar';
-import { Footer } from '@/components/footer';
 import { GlassCard } from '@/components/ui/glass-card';
 import { 
   isAdminAuthenticated, 
@@ -658,7 +657,6 @@ export default function AdminDashboardPage() {
             </form>
           </GlassCard>
         </main>
-        <Footer />
       </div>
     );
   }
@@ -2249,7 +2247,6 @@ export default function AdminDashboardPage() {
 
       </main>
 
-      <Footer />
     </div>
   );
 }

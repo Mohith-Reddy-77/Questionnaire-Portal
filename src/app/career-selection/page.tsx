@@ -14,7 +14,6 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { Navbar } from '@/components/navbar';
-import { Footer } from '@/components/footer';
 import { GlassCard } from '@/components/ui/glass-card';
 import { 
   getAssessmentResult, 
@@ -408,7 +407,6 @@ export default function CareerSelectionPage() {
 
       </main>
 
-      <Footer />
     </div>
   );
 }

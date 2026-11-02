@@ -19,7 +19,6 @@ import {
   FileText
 } from 'lucide-react';
 import { Navbar } from '@/components/navbar';
-import { Footer } from '@/components/footer';
 import { GlassCard } from '@/components/ui/glass-card';
 import { 
   isAdminAuthenticated, 
@@ -173,7 +172,6 @@ export default function ReadyReportPage() {
             </form>
           </GlassCard>
         </main>
-        <Footer />
       </div>
     );
   }
@@ -473,7 +471,6 @@ export default function ReadyReportPage() {
 
       </main>
 
-      <Footer />
     </div>
   );
 }
